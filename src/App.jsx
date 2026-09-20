@@ -1,11 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
-
+import {createResource, getResources, addResourceMember, getResourcesForUser} from './services/resourceService.js'
+import {addParticipant, getParticipants} from './services/participantService.js'
 function App() {
   const [count, setCount] = useState(0)
+
+  //testing the resource and participant services
+  useEffect(() => {
+    async function test() {
+      const testResource = await createResource("Test Resource", "This is a test resource", "rotation")
+      const testParticipant = await addParticipant("Test Participant")
+      const testMember = await addResourceMember(testResource.id, testParticipant.id, "owner")
+      const resources = await getResources()
+      const participants = await getParticipants(testResource.id)
+      const userResources = await getResourcesForUser(testParticipant.id)
+
+      console.log(testResource)
+      console.log("Resources: ", resources)
+      console.log("Participants: ", participants)
+      console.log("User Resources: ", userResources)
+    }
+
+    test()
+
+    }, [])
+
 
   return (
     <>

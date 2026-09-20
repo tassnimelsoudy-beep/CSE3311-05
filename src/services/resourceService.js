@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase.js'
 
-// Create a new resource record.
-// Use: createResource("Slides", "Notes", "email")
+
+// Creates a new resource in the "resources" table.
+// Requires a name and share method. Returns the new resource object, or null on failure.
 async function createResource(resourceName, description, shareMethod)
 {
     try {
@@ -32,8 +33,7 @@ async function createResource(resourceName, description, shareMethod)
     }
 }
 
-// Get all resources, newest first.
-// Use: getResources()
+// Gets every resource, newest first.
 async function getResources()
 {
     try {
@@ -55,8 +55,7 @@ async function getResources()
     }
 }
 
-// Fetch one resource using its id.
-// Use: getResource(12)
+// Gets one resource by its id. Returns a single object.
 async function getResource(resourceId)
 {
     try {
@@ -81,8 +80,8 @@ async function getResource(resourceId)
     
 }
 
-// Update a resource with any field changes.
-// Use: updateResource(12, { sharing_method: "link" })
+// Updates a resource. "updates" is an object of fields to change
+// (e.g. { name: "New Name" }), and resourceId picks which resource.
 async function updateResource(resourceId, updates)
 {
     try {
@@ -106,8 +105,7 @@ async function updateResource(resourceId, updates)
     
 }
 
-// Delete a resource by its id.
-// Use: deleteResource(12)
+// Permanently deletes a resource by its id.
 async function deleteResource(resourceId)
 {
     try {
@@ -129,25 +127,24 @@ async function deleteResource(resourceId)
     }
 }
 
-// Return all resources tied to a user.
-// Use: getResourcesForUser(currentUserId)
+// Gets all resources a participant belongs to.
+// Looks up resource_members and returns the linked resource details.
 async function getResourcesForUser(userId) 
 {
     try {
         const {data, error} = await supabase
-            .from("resource_members")
-            .select('resources(id, name, description, sharing_method, created_at)')
-            .eq("participant_id", userId)
-            .order("resources.created_at", {ascending: false})
-            
-            if (error) {
-                throw error
-            }
+        .from("resource_members")
+        .select('resources(id, name, description, sharing_method, created_at)')
+        .eq("participant_id", userId)
+        
+        
+        if (error) {
+            throw error
+        }
 
-            const resources = data.map(member => member.resources)
-
-            console.log("successfully retrieved resources")
-            return resources
+        const resources = data.map(member => member.resources)
+        resources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        return resources
     } catch (error)
     {
         console.error("Error retrieving data: ", error.message)
@@ -155,9 +152,10 @@ async function getResourcesForUser(userId)
     }
 }
 
-// Add a participant to a resource with their role.
-// Use: addResourceMember(resourceId, userId, "owner")
-async function addResourceMember(resourceId, userId, userRole)
+// Adds a participant to a resource with a role (e.g. "owner" or "member") role can null.
+// position (position > 0 or null) is optional and can be used to order participants in a resource.
+// Creates the link row in resource_members.
+async function addResourceMember(resourceId, userId, userRole, userPosition)
 {
        try {
      
@@ -166,7 +164,8 @@ async function addResourceMember(resourceId, userId, userRole)
         .insert({
             resource_id: resourceId, 
             participant_id: userId, 
-            role: userRole
+            role: userRole,
+            position: userPosition
         })
         .select()
 
@@ -182,3 +181,12 @@ async function addResourceMember(resourceId, userId, userRole)
         return null
     }
 }
+
+export { 
+    createResource, 
+    getResources, 
+    getResource, 
+    updateResource, 
+    deleteResource, 
+    getResourcesForUser, 
+    addResourceMember }

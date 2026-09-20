@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 
+// Adds a new participant to the "participants" table.
+// Returns the new row, or null if the name is empty or the insert fails
 async function addParticipant(userName)
 {
     try {
@@ -27,6 +29,9 @@ async function addParticipant(userName)
         return null
     }
 }
+
+// Gets all participants that belong to a given resource.
+// Looks up the resource_members table and returns the linked participants' id and name
 async function getParticipants(resourceId)
 {
     try {
@@ -35,21 +40,23 @@ async function getParticipants(resourceId)
         .from("resource_members")
         .select('participants(id, name)')
         .eq('resource_id', resourceId)
-        .order("participants.created_at", {ascending: false})
+ 
 
         if (error) {
             throw error
         }
 
-        const participants = data.map(member => member.participants)
-        console.log("successfully got particpants: ", data)
-        return participants
+        const resources = data.map(member => member.resources)
+        resources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        return resources
         } catch (error)
         {
             console.error("Error fetching participnats: ", error.message)
             return null
         } 
 }
+
+// Permanently deletes a participant from the "participants" table by their id
 async function deleteUser(userId)
 {
     try {
@@ -70,6 +77,9 @@ async function deleteUser(userId)
         return null
     }
 }
+
+// Updates a participant's info. "update" is an object of fields to change
+// (e.g. { name: "New Name" }), and userId picks which participant to update.
 async function updateUser(update, userId)
 {
     try {
@@ -92,6 +102,9 @@ async function updateUser(update, userId)
             return null
         }
 }
+
+// Removes a participant from one resource only (deletes the link in resource_members).
+// The participant still exists in the "participants" table.
 async function removeParticipant(participantId, resourceId)
 {
     try {
@@ -112,4 +125,12 @@ async function removeParticipant(participantId, resourceId)
         console.error("Error deleting data: ", error.message)
         return null
     }
+}
+
+export {
+    addParticipant,
+    getParticipants,
+    deleteUser,
+    updateUser,
+    removeParticipant
 }
