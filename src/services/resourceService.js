@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 
+// Create a new resource record.
+// Use: createResource("Slides", "Notes", "email")
 async function createResource(resourceName, description, shareMethod)
 {
     try {
@@ -15,6 +17,7 @@ async function createResource(resourceName, description, shareMethod)
             sharing_method: shareMethod
         })
         .select()
+        .single()
 
         if (error) {
             throw error
@@ -28,6 +31,9 @@ async function createResource(resourceName, description, shareMethod)
         return null
     }
 }
+
+// Get all resources, newest first.
+// Use: getResources()
 async function getResources()
 {
     try {
@@ -48,6 +54,9 @@ async function getResources()
         return null
     }
 }
+
+// Fetch one resource using its id.
+// Use: getResource(12)
 async function getResource(resourceId)
 {
     try {
@@ -71,6 +80,9 @@ async function getResource(resourceId)
     }
     
 }
+
+// Update a resource with any field changes.
+// Use: updateResource(12, { sharing_method: "link" })
 async function updateResource(resourceId, updates)
 {
     try {
@@ -93,6 +105,9 @@ async function updateResource(resourceId, updates)
     }
     
 }
+
+// Delete a resource by its id.
+// Use: deleteResource(12)
 async function deleteResource(resourceId)
 {
     try {
@@ -113,29 +128,35 @@ async function deleteResource(resourceId)
         return null
     }
 }
+
+// Return all resources tied to a user.
+// Use: getResourcesForUser(currentUserId)
 async function getResourcesForUser(userId) 
 {
     try {
         const {data, error} = await supabase
             .from("resource_members")
-            .select('resource_id(id, name, description, sharing_method, created_at)')
+            .select('resources(id, name, description, sharing_method, created_at)')
             .eq("participant_id", userId)
-
-            .order("resource.created_at", {ascending: false})
+            .order("resources.created_at", {ascending: false})
             
             if (error) {
                 throw error
             }
 
-            console.log("successfully retrieved resources")
-            return data
+            const resources = data.map(member => member.resources)
 
+            console.log("successfully retrieved resources")
+            return resources
     } catch (error)
     {
         console.error("Error retrieving data: ", error.message)
         return null
     }
 }
+
+// Add a participant to a resource with their role.
+// Use: addResourceMember(resourceId, userId, "owner")
 async function addResourceMember(resourceId, userId, userRole)
 {
        try {
