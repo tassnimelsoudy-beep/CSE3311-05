@@ -8,21 +8,22 @@ import {addParticipant, getParticipants} from './services/participantService.js'
 function App() {
   const [count, setCount] = useState(0)
 
-  //testing the resource and participant services
-  useEffect(() => {
-    async function test() {
-      const testResource = await createResource("Test Resource", "This is a test resource", "rotation")
-      const testParticipant = await addParticipant("Test Participant")
-      const testMember = await addResourceMember(testResource.id, testParticipant.id, "owner")
-      const resources = await getResources()
-      const participants = await getParticipants(testResource.id)
-      const userResources = await getResourcesForUser(testParticipant.id)
+  //testing the resource and participant services. can be deleted
 
-      console.log(testResource)
-      console.log("Resources: ", resources)
-      console.log("Participants: ", participants)
-      console.log("User Resources: ", userResources)
-    }
+  // useEffect(() => {
+  //   async function test() {
+  //     const testResource = await createResource("Test Resource", "This is a test resource", "rotation")
+  //     const testParticipant = await addParticipant("Test Participant")
+  //     const testMember = await addResourceMember(testResource.id, testParticipant.id, "owner", 1)
+  //     const resources = await getResources()
+  //     const participants = await getParticipants(testResource.id)
+  //     const userResources = await getResourcesForUser(testParticipant.id)
+
+  //     console.log(testResource)
+  //     console.log("Resources: ", resources)
+  //     console.log("Participants: ", participants)
+  //     console.log("User Resources: ", userResources)
+  //   }
 
     test()
 
