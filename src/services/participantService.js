@@ -35,25 +35,21 @@ async function addParticipant(userName)
 async function getParticipants(resourceId)
 {
     try {
-        
         const {data, error } = await supabase
         .from("resource_members")
         .select('participants(id, name)')
         .eq('resource_id', resourceId)
- 
 
         if (error) {
             throw error
         }
 
-        const resources = data.map(member => member.resources)
-        resources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        return resources
-        } catch (error)
-        {
-            console.error("Error fetching participnats: ", error.message)
-            return null
-        } 
+        return data.map(member => member.participants)
+    } catch (error)
+    {
+        console.error("Error fetching participants: ", error.message)
+        return null
+    }
 }
 
 // Permanently deletes a participant from the "participants" table by their id
@@ -127,12 +123,55 @@ async function removeParticipant(participantId, resourceId)
     }
 }
 
-// Gets all participants in the participants table (id and name)
+// Gets all participants in the participants table (id and name), sorted by name
+async function getAllParticipants()
+{
+    try {
+        const {data, error} = await supabase
+        .from("participants")
+        .select('id, name')
+        .order("name", {ascending: true})
 
+        if (error) {
+            throw error
+        }
+
+        return data
+    } catch (error)
+    {
+        console.error("Error fetching participants: ", error.message)
+        return null
+    }
+}
+
+// Gets the participant row linked to a login account (participants.user_id).
+// Returns the participant, or null if none is linked yet.
+async function getCurrentParticipant(userId)
+{
+    try {
+        const {data, error} = await supabase
+        .from("participants")
+        .select('id, name, user_id')
+        .eq("user_id", userId)
+        .maybeSingle()
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    } catch (error)
+    {
+        console.error("Error fetching current participant: ", error.message)
+        return null
+    }
+}
 
 export {
     addParticipant,
     getParticipants,
+    getAllParticipants,
+    getCurrentParticipant,
     deleteUser,
     updateUser,
     removeParticipant
