@@ -127,6 +127,9 @@ async function removeParticipant(participantId, resourceId)
     }
 }
 
+// Gets all participants in the participants table (id and name)
+
+
 export {
     addParticipant,
     getParticipants,
