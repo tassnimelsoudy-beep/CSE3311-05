@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 
 // Creates a new resource in the "resources" table.
 // Requires a name and share method. Returns the new resource object, or null on failure.
+// description can be null
 async function createResource(resourceName, description, shareMethod)
 {
     try {
@@ -144,6 +145,7 @@ async function getResourcesForUser(userId)
 
         const resources = data.map(member => member.resources)
         resources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        console.log("successfully retrieved recourses: ", data)
         return resources
     } catch (error)
     {
