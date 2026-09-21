@@ -1,0 +1,252 @@
+.home {
+  min-height: 100vh;
+}
+
+/* Top navigation */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 64px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.topnav-left,
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.topnav-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+
+.group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-weight: 500;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.profile-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-weight: 500;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
+/* Page body */
+.home-main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.greeting {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.panel-header {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-header h2 {
+  font-size: 1.2rem;
+}
+
+.panel-header p {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin-top: 2px;
+}
+
+/* Empty activities */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 72px 24px 80px;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--turn-tint);
+  color: #9a6b10;
+  margin-bottom: 18px;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  color: var(--ink-soft);
+  max-width: 24rem;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.member-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+}
+
+.member-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.member-meta strong {
+  font-weight: 600;
+}
+
+.member-meta span {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.how-turns {
+  padding: 18px 20px;
+  background: var(--brand-tint);
+  border-color: transparent;
+}
+
+.how-turns h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: var(--brand);
+}
+
+.how-turns p {
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+/* Tablet: sidebar drops below */
+@media (max-width: 900px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Phone: tighten the nav */
+@media (max-width: 600px) {
+  .topnav {
+    padding: 0 16px;
+  }
+
+  .topnav-divider,
+  .group-label,
+  .profile-name,
+  .btn-ghost span {
+    display: none;
+  }
+
+  .home-main {
+    padding: 24px 16px 40px;
+  }
+}
