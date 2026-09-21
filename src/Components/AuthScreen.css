@@ -1,0 +1,269 @@
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(380px, 5fr) 6fr;
+}
+
+/* Left: brand panel with the turn-passing illustration */
+.auth-brand {
+  background: var(--ink);
+  color: #f4f7f5;
+  padding: 40px 56px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  overflow: hidden;
+}
+
+.auth-brand-logo,
+.auth-mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+.auth-brand-copy {
+  max-width: 26rem;
+}
+
+.auth-brand-copy h1 {
+  font-size: clamp(2rem, 3.2vw, 2.9rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+
+.auth-brand-copy p {
+  color: #b9c9c4;
+  font-size: 1.05rem;
+}
+
+/* The ring: four seats around a chore, with a highlight passing between them */
+.turn-ring {
+  --ring: 300px;
+  position: relative;
+  width: var(--ring);
+  height: var(--ring);
+  margin: auto;
+  flex-shrink: 0;
+  border: 2px dashed rgba(244, 247, 245, 0.22);
+  border-radius: 50%;
+}
+
+.turn-ring-marker {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  animation: pass-turn 12s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Glowing dot that sits behind whichever seat currently "has the turn" */
+.turn-ring-marker::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  margin-left: -30px;
+  border-radius: 50%;
+  background: var(--turn);
+  box-shadow: 0 0 0 8px rgba(242, 181, 68, 0.2);
+}
+
+@keyframes pass-turn {
+  0%, 20% { transform: rotate(0deg); }
+  25%, 45% { transform: rotate(90deg); }
+  50%, 70% { transform: rotate(180deg); }
+  75%, 95% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.turn-ring-seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 80px;
+  margin-left: -40px;
+  margin-top: -22px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.turn-ring-seat .avatar {
+  box-shadow: 0 0 0 3px var(--ink);
+}
+
+.seat-0 { top: 0; left: 50%; }
+.seat-1 { top: 50%; left: 100%; }
+.seat-2 { top: 100%; left: 50%; }
+.seat-3 { top: 50%; left: 0; }
+
+.turn-ring-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 2px;
+}
+
+.turn-ring-center strong {
+  font-family: var(--display);
+  font-size: 1.25rem;
+}
+
+.turn-ring-center span {
+  color: #b9c9c4;
+  font-size: 0.9rem;
+}
+
+/* Right: the form */
+.auth-main {
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-mobile-logo {
+  display: none;
+  margin-bottom: 32px;
+}
+
+.auth-card h2 {
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+}
+
+.auth-sub {
+  color: var(--ink-soft);
+  margin: 8px 0 28px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: 24px;
+  background: #e2e8e5;
+  border-radius: var(--radius-md);
+}
+
+.auth-tabs button {
+  border: 0;
+  background: transparent;
+  padding: 9px 0;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.auth-tabs button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(23, 51, 47, 0.12);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.field input {
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color 0.15s;
+}
+
+.field input::placeholder {
+  color: var(--ink-faint);
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+
+.auth-error {
+  background: var(--danger-tint);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  margin-bottom: 16px;
+}
+
+.btn-primary {
+  width: 100%;
+  border: 0;
+  padding: 13px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.auth-switch button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Tablet and phone: drop the illustration, keep the form */
+@media (max-width: 860px) {
+  .auth {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-brand {
+    display: none;
+  }
+
+  .auth-mobile-logo {
+    display: flex;
+  }
+
+  .auth-main {
+    place-items: start center;
+    padding-top: 48px;
+  }
+}
