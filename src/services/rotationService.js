@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js'
+import { getParticipants } from './participantService.js'
 
 // Creates a rotation schedule for a resource (e.g. every 1 "week").
 // Returns the new rotation object, or null on failure.
@@ -139,11 +140,54 @@ async function updateParticipantPosition(resourceId, participantId, position)
         return null
     }
 }
+// Finds the next participant in a rotation
+function getNextParticipant(participants, currentParticipantId)
+{
+    if (!participants || participants.length === 0) {
+        return null
+    }
 
+    const currentIndex = participants.findIndex(
+        participant => participant.id === currentParticipantId
+    )
+
+    if (currentIndex === -1) {
+        return null
+    }
+
+    const nextIndex = (currentIndex + 1) % participants.length
+
+    return participants[nextIndex]
+}
+
+// Gets the first participant when a rotation starts
+function getFirstParticipant(participants)
+{
+    if (!participants || participants.length === 0) {
+        return null
+    }
+
+    return participants[0]
+}
+
+// Gets the next participant for a resource
+async function getNextParticipantForResource(resourceId, currentParticipantId)
+{
+    const participants = await getParticipants(resourceId)
+
+    if (!participants) {
+        return null
+    }
+
+    return getNextParticipant(participants, currentParticipantId)
+}
 export {
     createRotation,
-    getRotation, 
-    updateRotation, 
+    getRotation,
+    updateRotation,
     getRotationParticipants,
-    updateParticipantPosition
+    updateParticipantPosition,
+    getNextParticipant,
+    getFirstParticipant,
+    getNextParticipantForResource
 }
