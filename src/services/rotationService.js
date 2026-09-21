@@ -1,18 +1,31 @@
 import { supabase } from '../lib/supabase.js'
-import { getParticipants } from './participantService.js'
+
 
 // Creates a rotation schedule for a resource (e.g. every 1 "week").
+// Sets the current person to the first in the turn order and
+// next_rotation_at to now + the frequency.
 // Returns the new rotation object, or null on failure.
-//rotation logic gives it a next person and the date of the next rotation
 async function createRotation(resourceId, frequencyValue, frequencyUnit)
 {
         try {
+
+            const participants = await getRotationParticipants(resourceId)
+            const current = getFirstParticipant(participants)
+            const dueDate = nextRotationDate(frequencyValue, frequencyUnit)
+
+            if (!dueDate) {
+            console.error("invalid frequency unit")
+            return null
+            }
+
         const {data, error } = await supabase
         .from("rotations")
         .insert({
             resource_id: resourceId,
             frequency_value: frequencyValue,
-            frequency_unit: frequencyUnit
+            frequency_unit: frequencyUnit,
+            current_participant_id: current ? current.id : null,
+            next_rotation_at: dueDate
         })
         .select()
         .single()
@@ -30,8 +43,8 @@ async function createRotation(resourceId, frequencyValue, frequencyUnit)
     }
 }
 
-// Gets the rotation for a resource. Returns a single object.
-// Returns null (without an error) if the resource has no rotation yet.
+// Gets the rotation row for a resource (frequency, current person, next rotation time).
+// Returns a single object, or null (without an error) if the resource has no rotation method
 async function getRotation(resourceId)
 {
         try {
@@ -82,7 +95,7 @@ async function updateRotation(rotationId, updates)
 }
 
 // Gets the members in a resource's rotation, ordered by turn position.
-// Returns rows like { position: 1, participants: { id, name } }.
+// Returns a flat array like [{ id: 3, name: "Sam", position: 1 }, ...].
 async function getRotationParticipants(resourceId)
 {
     try {
@@ -97,9 +110,14 @@ async function getRotationParticipants(resourceId)
         throw error
     }
 
+    const participants = data.map(member => ({
+        ...member.participants,
+        position: member.position
+    }))
+
     
     console.log("successfully retrieved rotation participants: ", data)
-    return data
+    return participants
 
     } catch (error)
     {
@@ -140,6 +158,7 @@ async function updateParticipantPosition(resourceId, participantId, position)
         return null
     }
 }
+
 // Finds the next participant in a rotation
 function getNextParticipant(participants, currentParticipantId)
 {
@@ -160,6 +179,69 @@ function getNextParticipant(participants, currentParticipantId)
     return participants[nextIndex]
 }
 
+// Returns the date of the next rotation (now + frequency) as an ISO string.
+// Returns null if the unit isn't minute, hour, day, week, or month.
+function nextRotationDate(frequencyValue, frequencyUnit, fromDate = new Date())
+{
+    const date = new Date(fromDate)
+
+     if (frequencyUnit === "minute") {
+        date.setMinutes(date.getMinutes() + frequencyValue)
+    } else if (frequencyUnit === "hour") {
+        date.setHours(date.getHours() + frequencyValue)
+    } else if (frequencyUnit === "day") {
+        date.setDate(date.getDate() + frequencyValue)
+    } else if (frequencyUnit === "week") {
+        date.setDate(date.getDate() + frequencyValue * 7)
+    } else if (frequencyUnit === "month") {
+        date.setMonth(date.getMonth() + frequencyValue)
+    } else {
+        return null
+    }
+
+    return date.toISOString()
+}
+
+// Passes the turn to the next person and sets the next rotation date.
+// Falls back to the first person if the current one is no longer a member.
+// Returns the updated rotation, or null if there's no rotation or no members.
+async function advanceTurn(resourceId)
+{
+    const rotation = await getRotation(resourceId)
+    if (!rotation) {
+    return null
+    }
+    const participants = await getRotationParticipants(resourceId)
+
+    const next = getNextParticipant(participants, rotation.current_participant_id) || getFirstParticipant(participants)
+
+    if (!next) {
+    return null
+    }
+
+    return updateRotation(rotation.id, {
+            current_participant_id: next.id,
+            next_rotation_at: nextRotationDate(rotation.frequency_value, rotation.frequency_unit)
+    })
+}
+
+// Advances the turn only if the next rotation time has passed.
+// Returns the updated rotation if it advanced, otherwise the unchanged rotation.
+async function advanceIfDue(resourceId)
+{
+    const rotation = await getRotation(resourceId)
+
+    if (!rotation || !rotation.next_rotation_at) {
+        return rotation
+    }
+
+    if (new Date(rotation.next_rotation_at) <= new Date()) {
+        return advanceTurn(resourceId)
+    }
+
+    return rotation
+}
+
 // Gets the first participant when a rotation starts
 function getFirstParticipant(participants)
 {
@@ -169,11 +251,10 @@ function getFirstParticipant(participants)
 
     return participants[0]
 }
-
 // Gets the next participant for a resource
 async function getNextParticipantForResource(resourceId, currentParticipantId)
 {
-    const participants = await getParticipants(resourceId)
+    const participants = await getRotationParticipants(resourceId)
 
     if (!participants) {
         return null
@@ -189,5 +270,8 @@ export {
     updateParticipantPosition,
     getNextParticipant,
     getFirstParticipant,
-    getNextParticipantForResource
+    getNextParticipantForResource,
+    advanceIfDue,
+    advanceTurn,
+    nextRotationDate
 }
