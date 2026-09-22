@@ -8,4 +8,9 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  // Settings for `npm test` (Vitest). jsdom gives tests a fake browser page.
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/tests/setup.js',
+  },
 })
