@@ -5,7 +5,7 @@ import { fakeQuery } from './fakeSupabase.js'
 vi.mock('../lib/supabase.js', () => ({ supabase: { from: vi.fn() } }))
 
 import { supabase } from '../lib/supabase.js'
-import { createResource } from '../services/resourceService.js'
+import { createResource, addResourceMembers } from '../services/resourceService.js'
 import { addParticipant, getParticipants } from '../services/participantService.js'
 
 beforeEach(() => {
@@ -31,6 +31,21 @@ describe('createResource', () => {
       sharing_method: 'Rotation',
     })
     expect(result).toEqual({ id: 1, name: 'Trash' })
+  })
+})
+
+describe('addResourceMembers', () => {
+  it('saves members with turn positions 1, 2, 3 in the order given', async () => {
+    const insert = fakeQuery({ data: [], error: null })
+    supabase.from.mockReturnValueOnce(insert)
+
+    await addResourceMembers(5, [30, 10, 20])
+
+    expect(insert.insert).toHaveBeenCalledWith([
+      { resource_id: 5, participant_id: 30, role: null, position: 1 },
+      { resource_id: 5, participant_id: 10, role: null, position: 2 },
+      { resource_id: 5, participant_id: 20, role: null, position: 3 },
+    ])
   })
 })
 

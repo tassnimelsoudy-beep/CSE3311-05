@@ -184,6 +184,36 @@ async function addResourceMember(resourceId, userId, userRole, userPosition)
     }
 }
 
+// Adds several participants to a resource at once, in turn order.
+// The first id gets position 1, the next position 2, and so on.
+// Returns the new resource_members rows, or null on failure.
+async function addResourceMembers(resourceId, participantIds)
+{
+    try {
+        const rows = participantIds.map((participantId, index) => ({
+            resource_id: resourceId,
+            participant_id: participantId,
+            role: null,
+            position: index + 1
+        }))
+
+        const {data, error} = await supabase
+        .from("resource_members")
+        .insert(rows)
+        .select()
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    } catch (error)
+    {
+        console.error("Error inserting resource members: ", error.message)
+        return null
+    }
+}
+
 export { 
     createResource, 
     getResources, 
@@ -191,4 +221,5 @@ export {
     updateResource, 
     deleteResource, 
     getResourcesForUser, 
-    addResourceMember }
+    addResourceMember,
+    addResourceMembers }

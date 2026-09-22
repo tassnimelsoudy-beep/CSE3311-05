@@ -7,10 +7,9 @@ import Logo from './Components/Logo.jsx'
 function App() {
   // undefined = still checking for a saved login, null = logged out
   const [session, setSession] = useState(undefined)
- 
+
   useEffect(() => {
     // Fires once right away with any saved session, then on every login/logout.
-  
     return onAuthChange(setSession)
   }, [])
 

@@ -31,8 +31,9 @@ beforeEach(() => {
 })
 
 describe('advanceTurn', () => {
-  it('saves the next person as current and sets a new due date', async () => {
-    const getRotation = fakeQuery({ data: rotationRow(), error: null })
+  it('saves the next person as current and moves the due date one period later', async () => {
+    const dueTomorrow = new Date(Date.now() + 86400000).toISOString()
+    const getRotation = fakeQuery({ data: rotationRow({ next_rotation_at: dueTomorrow }), error: null })
     const getMembers = fakeQuery({ data: members, error: null })
     const saveRotation = fakeQuery({ data: rotationRow({ current_participant_id: 2 }), error: null })
     supabase.from
@@ -42,10 +43,15 @@ describe('advanceTurn', () => {
 
     const result = await advanceTurn(5)
 
+    // Due tomorrow + 1 week: counted from the old due date, not from now.
     expect(saveRotation.update).toHaveBeenCalledWith({
       current_participant_id: 2,
       next_rotation_at: expect.any(String),
     })
+    const saved = saveRotation.update.mock.calls[0][0].next_rotation_at
+    const expected = new Date(dueTomorrow)
+    expected.setDate(expected.getDate() + 7)
+    expect(new Date(saved)).toEqual(expected)
     expect(saveRotation.eq).toHaveBeenCalledWith('id', 10)
     expect(result.current_participant_id).toBe(2)
   })

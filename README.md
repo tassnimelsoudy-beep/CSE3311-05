@@ -15,9 +15,14 @@ Tests live in `src/tests/` and never contact the real database; Supabase is repl
 
 | File | What it covers |
 | --- | --- |
-| `rotationLogic.test.js` | Who goes next, wrapping around, due-date math (including month ends) |
+| `rotationLogic.test.js` | Who goes next, wrapping around, due-date math (month ends; each completion moves the date forward; missed turns) |
 | `rotationService.test.js` | Advancing a turn and saving it; advancing only when overdue |
-| `dataServices.test.js` | Rejecting blank names; saving resources; reading a resource's members |
+| `dataServices.test.js` | Rejecting blank names; saving resources; members saved in turn order; reading a resource's members |
+| `activityHelpers.test.js` | Dashboard labels ("Weekly", "Due Friday"), turn order display, who is in the household, what's up next |
 | `authService.test.js` | Sign-up sends the user's name; readable login/sign-up errors |
 | `avatar.test.js` | Initials and which name is displayed |
-| `screens.test.jsx` | Sign-up form requires a name; login screen vs. home page |
+| `screens.test.jsx` | Sign-up form requires a name; login screen vs. home page; dashboard shows your turn; marking done passes the turn |
+
+## Demo data
+
+This is a prototype. The first time an account loads the home page with no activities, `src/services/demoService.js` creates a sample household for it: three pretend roommates (participants with no login), two chores, and a car to share. Each account gets its own copy.

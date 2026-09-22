@@ -1,122 +1,120 @@
-import { useEffect, useState } from 'react'
-import { Home as HouseIcon, LogOut, ClipboardList, Info } from 'lucide-react'
-import { logout } from '../services/authService.js'
+import { useCallback, useEffect, useState } from 'react'
 import { getCurrentParticipant } from '../services/participantService.js'
+import { advanceTurn } from '../services/rotationService.js'
+import { loadActivities, createRotatingActivity } from '../services/activityService.js'
+import { loadActivitiesWithDemo } from '../services/demoService.js'
 import { getDisplayName } from '../utils/avatar.js'
-import Avatar from './Avatar.jsx'
-import Logo from './Logo.jsx'
+import { getHousehold, getNextUp } from '../utils/activity.js'
+import TopNav from './TopNav.jsx'
+import ActivityPanel from './ActivityPanel.jsx'
+import NextUpBar from './NextUpBar.jsx'
+import MembersPanel from './MembersPanel.jsx'
+import AddResourceModal from './AddResourceModal.jsx'
+import Toast from './Toast.jsx'
 import './Home.css'
 
 export default function Home({ user }) {
   const [participant, setParticipant] = useState(null)
-  const [loggingOut, setLoggingOut] = useState(false)
+  const [activities, setActivities] = useState(null) // null while loading
+  const [search, setSearch] = useState('')
+  const [busyId, setBusyId] = useState(null)
+  const [adding, setAdding] = useState(false)
+  const [toast, setToast] = useState(null)
 
-  // Look up the participant row linked to this account (via participants.user_id).
+  // Find this account's participant, then load (or, for a new account, create)
+  // their household's activities.
   useEffect(() => {
     let active = true
-    getCurrentParticipant(user.id).then(result => {
-      if (active) setParticipant(result)
-    })
+    async function load() {
+      const me = await getCurrentParticipant(user.id)
+      if (!active) return
+      setParticipant(me)
+      if (!me) {
+        setActivities([])
+        return
+      }
+      const list = await loadActivitiesWithDemo(me)
+      if (active) setActivities(list || [])
+    }
+    load()
     return () => {
       active = false
     }
   }, [user.id])
 
+  const showToast = useCallback(message => setToast({ id: Date.now(), message }), [])
+  const hideToast = useCallback(() => setToast(null), [])
+  const comingSoon = useCallback(feature => showToast(`${feature} will be available in a later version.`), [showToast])
+  const closeModal = useCallback(() => setAdding(false), [])
+
   const name = getDisplayName(participant, user)
   const firstName = name.split(' ')[0]
+  const meId = participant?.id
+  const household = getHousehold(activities || [], participant ? { id: meId, name } : null)
 
-  async function handleLogout() {
-    setLoggingOut(true)
-    await logout()
-    // App hears the logout and shows the login screen.
+  async function handleMarkDone(activity) {
+    setBusyId(activity.id)
+    const updated = await advanceTurn(activity.id)
+    setBusyId(null)
+
+    if (!updated) {
+      showToast(`Couldn’t update ${activity.name}. Try again.`)
+      return
+    }
+    // Update in place (no re-sort) so the row doesn't jump away from the pointer.
+    setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
+    const next = activity.members.find(member => member.id === updated.current_participant_id)
+    const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
+    showToast(`Marked ${activity.name} done. ${who} up next.`)
+  }
+
+  async function handleCreate(values) {
+    const created = await createRotatingActivity(values)
+    if (!created) {
+      return 'Couldn’t add the activity. Try again.'
+    }
+    const list = await loadActivities(meId)
+    if (list) setActivities(list)
+    setAdding(false)
+    showToast(`Added ${values.name}.`)
+    return null
   }
 
   return (
     <div className="home">
-      <header className="topnav">
-        <div className="topnav-left">
-          <div className="brand">
-            <Logo size={30} />
-            <span>Rotate</span>
-          </div>
-          <span className="topnav-divider" aria-hidden="true" />
-          <div className="group-label">
-            <HouseIcon size={16} aria-hidden="true" />
-            <span>My household</span>
-          </div>
-        </div>
-
-        <div className="topnav-right">
-          <div className="profile">
-            <Avatar name={name} size={32} />
-            <span className="profile-name">{name}</span>
-          </div>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            aria-label="Log out"
-          >
-            <LogOut size={16} aria-hidden="true" />
-            <span>{loggingOut ? 'Logging out…' : 'Log out'}</span>
-          </button>
-        </div>
-      </header>
+      <TopNav name={name} onComingSoon={comingSoon} />
 
       <main className="home-main">
         <h1 className="greeting">Hi, {firstName}</h1>
 
         <div className="home-grid">
-          <section className="panel activities" aria-labelledby="activities-title">
-            <div className="panel-header">
-              <h2 id="activities-title">Group activities</h2>
-              <p>Rotations, reservations, and one-off chores your group shares.</p>
-            </div>
+          <div className="home-content">
+            <ActivityPanel
+              activities={activities}
+              meId={meId}
+              search={search}
+              onSearch={setSearch}
+              busyId={busyId}
+              onMarkDone={handleMarkDone}
+              onComingSoon={comingSoon}
+            />
+            <NextUpBar
+              nextUp={getNextUp(activities || [])}
+              meId={meId}
+              onAdd={() => setAdding(true)}
+              onComingSoon={comingSoon}
+              disabled={!participant || activities === null}
+            />
+          </div>
 
-            <div className="empty-state">
-              <div className="empty-icon">
-                <ClipboardList size={28} aria-hidden="true" />
-              </div>
-              <h3>No activities yet</h3>
-              <p>
-                Chores and shared items your group adds will show up here, along with whose
-                turn it is.
-              </p>
-            </div>
-          </section>
-
-          <aside className="sidebar">
-            <section className="panel" aria-labelledby="members-title">
-              <div className="panel-header">
-                <h2 id="members-title">Group members</h2>
-                <p>People in your household</p>
-              </div>
-              <ul className="member-list">
-                <li className="member">
-                  <Avatar name={name} size={36} />
-                  <div className="member-meta">
-                    <strong>{name}</strong>
-                    <span>{user.email}</span>
-                  </div>
-                  <span className="pill">You</span>
-                </li>
-              </ul>
-            </section>
-
-            <section className="panel how-turns" aria-labelledby="turns-title">
-              <h2 id="turns-title">
-                <Info size={18} aria-hidden="true" />
-                How turns work
-              </h2>
-              <p>
-                When you mark a chore as done, the turn passes to the next person. If nobody
-                marks it by the deadline, it passes on automatically.
-              </p>
-            </section>
-          </aside>
+          <MembersPanel household={household} email={user.email} />
         </div>
       </main>
+
+      {adding && (
+        <AddResourceModal household={household} meId={meId} onClose={closeModal} onCreate={handleCreate} />
+      )}
+      <Toast toast={toast} onDone={hideToast} />
     </div>
   )
 }

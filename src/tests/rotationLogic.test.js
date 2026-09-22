@@ -8,6 +8,7 @@ import {
   getNextParticipant,
   getFirstParticipant,
   nextRotationDate,
+  followingDueDate,
 } from '../services/rotationService.js'
 
 const alex = { id: 1, name: 'Alex', position: 1 }
@@ -68,5 +69,28 @@ describe('nextRotationDate', () => {
 
   it('returns null for an unknown unit', () => {
     expect(nextRotationDate(1, 'fortnight', start)).toBeNull()
+  })
+})
+
+describe('followingDueDate', () => {
+  const now = new Date(2027, 2, 15, 9, 0) // March 15, 2027
+  const weekly = dueAt => ({ frequency_value: 1, frequency_unit: 'week', next_rotation_at: dueAt })
+
+  it('counts one period from the current due date, not from now', () => {
+    const dueTuesday = new Date(2027, 2, 16, 18, 0).toISOString()
+    expect(new Date(followingDueDate(weekly(dueTuesday), now))).toEqual(new Date(2027, 2, 23, 18, 0))
+  })
+
+  it('moves the date forward again each time a turn is completed', () => {
+    const first = followingDueDate(weekly(new Date(2027, 2, 16, 18, 0).toISOString()), now)
+    const second = followingDueDate(weekly(first), now)
+    expect(new Date(second)).toEqual(new Date(2027, 2, 30, 18, 0))
+  })
+
+  it('skips to the first future date when several periods were missed', () => {
+    // Due Feb 22; weekly steps are Mar 1, Mar 8, then Mar 15 at 6pm, which is
+    // still ahead of "now" (Mar 15, 9am), so that's the next due date.
+    const threeWeeksAgo = new Date(2027, 1, 22, 18, 0).toISOString()
+    expect(new Date(followingDueDate(weekly(threeWeeksAgo), now))).toEqual(new Date(2027, 2, 15, 18, 0))
   })
 })

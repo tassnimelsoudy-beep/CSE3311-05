@@ -227,8 +227,25 @@ async function advanceTurn(resourceId)
 
     return updateRotation(rotation.id, {
             current_participant_id: next.id,
-            next_rotation_at: nextRotationDate(rotation.frequency_value, rotation.frequency_unit)
+            next_rotation_at: followingDueDate(rotation)
     })
+}
+
+// The due date for the next turn: one period after the current due date, so
+// completing a turn twice moves the date forward twice (counting from "now"
+// would give the same date both times). If that date is still in the past
+// (turns were missed for several periods), keeps stepping forward until it's
+// in the future. Starts from now if the rotation has no due date yet.
+function followingDueDate(rotation, now = new Date())
+{
+    const { frequency_value: value, frequency_unit: unit } = rotation
+    let next = nextRotationDate(value, unit, rotation.next_rotation_at || now)
+
+    for (let steps = 0; next && new Date(next) <= now && steps < 1000; steps++) {
+        next = nextRotationDate(value, unit, next)
+    }
+
+    return next
 }
 
 // Advances the turn only if the next rotation time has passed.
@@ -279,5 +296,6 @@ export {
     getNextParticipantForResource,
     advanceIfDue,
     advanceTurn,
-    nextRotationDate
+    nextRotationDate,
+    followingDueDate
 }
