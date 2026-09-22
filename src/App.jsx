@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { onAuthChange } from './services/authService.js'
-import {test} from './tests/resourceTests.js'
 import AuthScreen from './Components/AuthScreen.jsx'
 import Home from './Components/Home.jsx'
 import Logo from './Components/Logo.jsx'
