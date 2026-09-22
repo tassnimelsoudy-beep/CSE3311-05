@@ -194,7 +194,13 @@ function nextRotationDate(frequencyValue, frequencyUnit, fromDate = new Date())
     } else if (frequencyUnit === "week") {
         date.setDate(date.getDate() + frequencyValue * 7)
     } else if (frequencyUnit === "month") {
+        // Keep the same day of the month, but clamp to the last day when the
+        // target month is shorter (Jan 31 + 1 month -> Feb 28, not Mar 3).
+        const day = date.getDate()
+        date.setDate(1)
         date.setMonth(date.getMonth() + frequencyValue)
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+        date.setDate(Math.min(day, lastDay))
     } else {
         return null
     }
