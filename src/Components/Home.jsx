@@ -15,6 +15,8 @@ import './Home.css'
 
 export default function Home({ user }) {
   const [participant, setParticipant] = useState(null)
+  const [groups, setGroups] = useState([])
+  const [selectedGroup, setSelectedGroup] = useState(null) //added
   const [activities, setActivities] = useState(null) // null while loading
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState(null)
@@ -82,7 +84,8 @@ export default function Home({ user }) {
 
   return (
     <div className="home">
-      <TopNav name={name} onComingSoon={comingSoon} />
+      <TopNav name={name} onComingSoon={comingSoon} groups={groups} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup}/>
+      {/* i added group stuff above */}
 
       <main className="home-main">
         <h1 className="greeting">Hi, {firstName}</h1>
@@ -111,8 +114,9 @@ export default function Home({ user }) {
         </div>
       </main>
 
-      {adding && (
-        <AddResourceModal household={household} meId={meId} onClose={closeModal} onCreate={handleCreate} />
+      {/*update groupId name here */}
+      {adding && (        
+        <AddResourceModal household={household} meId={meId} groupId={selectedGroup?.id} onClose={closeModal} onCreate={handleCreate} />
       )}
       <Toast toast={toast} onDone={hideToast} />
     </div>

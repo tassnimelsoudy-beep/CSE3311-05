@@ -28,9 +28,14 @@ async function loadActivities(participantId)
 // Creates a rotating activity: the resource, its members in turn order
 // (first id goes first), and the rotation schedule.
 // Returns the new resource, or null if any step failed.
-async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds })
+async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, groupId })
 {
-    const resource = await createResource(name, description || null, 'Rotation')
+
+    if (!groupId) {
+        return null;
+    }
+
+    const resource = await createResource(name, description || null, 'Rotation', groupId)
     if (!resource) {
         return null
     }
