@@ -181,7 +181,24 @@ async function getResourcesForUser(userId)
 //whoever is doing group can implement this
 async function getResourcesForGroup(groupId)
 {
+    try {
+        const {data, error} = await supabase
+        .from("resources")
+        .select('id, name, description, sharing_method, created_at, created_by, group_id')
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false });
+        
+        
+        if (error) {
+            throw error
+        }
 
+        return data
+    } catch (error)
+    {
+        console.error("Error retrieving data: ", error.message)
+        return null
+    }
 }
 
 // Adds a participant to a resource with a role (e.g. "owner" or "member") role can null.
@@ -249,5 +266,6 @@ export {
     updateResource, 
     deleteResource, 
     getResourcesForUser, 
+    getResourcesForGroup,
     addResourceMember,
     addResourceMembers }
