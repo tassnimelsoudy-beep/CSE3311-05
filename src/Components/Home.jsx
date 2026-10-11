@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getCurrentParticipant } from '../services/participantService.js'
 import { advanceTurn } from '../services/rotationService.js'
-import { loadActivities, createRotatingActivity } from '../services/activityService.js'
+import {
+  loadActivities,
+  createRotatingActivity,
+  updateActivity,
+  deleteActivity,
+} from '../services/activityService.js'
 import { loadActivitiesWithDemo } from '../services/demoService.js'
 import { getDisplayName } from '../utils/avatar.js'
 import { getHousehold, getNextUp } from '../utils/activity.js'
@@ -10,6 +15,8 @@ import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
 import MembersPanel from './MembersPanel.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
+import EditActivityModal from './EditActivityModal.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
 import Toast from './Toast.jsx'
 import './Home.css'
 
@@ -19,6 +26,9 @@ export default function Home({ user }) {
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState(null) // activity being edited
+  const [deleting, setDeleting] = useState(null) // activity awaiting delete confirmation
+  const [deleteError, setDeleteError] = useState('')
   const [toast, setToast] = useState(null)
 
   // Find this account's participant, then load (or, for a new account, create)
@@ -46,6 +56,7 @@ export default function Home({ user }) {
   const hideToast = useCallback(() => setToast(null), [])
   const comingSoon = useCallback(feature => showToast(`${feature} will be available in a later version.`), [showToast])
   const closeModal = useCallback(() => setAdding(false), [])
+  const closeEdit = useCallback(() => setEditing(null), [])
 
   const name = getDisplayName(participant, user)
   const firstName = name.split(' ')[0]
@@ -69,7 +80,7 @@ export default function Home({ user }) {
   }
 
   async function handleCreate(values) {
-    const created = await createRotatingActivity(values)
+    const created = await createRotatingActivity({ ...values, createdBy: meId })
     if (!created) {
       return 'Couldn’t add the activity. Try again.'
     }
@@ -78,6 +89,55 @@ export default function Home({ user }) {
     setAdding(false)
     showToast(`Added ${values.name}.`)
     return null
+  }
+
+  // Saves edits and updates the row in place, so the list doesn't reload.
+  async function handleSaveEdit(changes) {
+    const activity = editing
+    const result = await updateActivity(activity, changes)
+    if (!result) {
+      return 'Couldn’t save those changes. Try again.'
+    }
+
+    setActivities(list =>
+      list.map(item =>
+        item.id === activity.id
+          ? { ...item, ...result.resource, rotation: result.rotation }
+          : item
+      )
+    )
+    setEditing(null)
+    showToast(`Saved changes to ${result.resource.name}.`)
+    return null
+  }
+
+  // Step one of deleting: swap the edit dialog for the confirmation.
+  function handleRequestDelete() {
+    setDeleteError('')
+    setDeleting(editing)
+    setEditing(null)
+  }
+
+  // Cancelling the confirmation goes back to editing, rather than dropping
+  // the person back to the dashboard with their changes gone.
+  function handleCancelDelete() {
+    setEditing(deleting)
+    setDeleting(null)
+  }
+
+  async function handleConfirmDelete() {
+    const activity = deleting
+    setBusyId(activity.id)
+    const removed = await deleteActivity(activity.id)
+    setBusyId(null)
+
+    if (!removed) {
+      setDeleteError('Couldn’t delete this activity. Try again.')
+      return
+    }
+    setActivities(list => list.filter(item => item.id !== activity.id))
+    setDeleting(null)
+    showToast(`Deleted ${activity.name}.`)
   }
 
   return (
@@ -96,6 +156,7 @@ export default function Home({ user }) {
               onSearch={setSearch}
               busyId={busyId}
               onMarkDone={handleMarkDone}
+              onEdit={setEditing}
               onComingSoon={comingSoon}
             />
             <NextUpBar
@@ -114,6 +175,29 @@ export default function Home({ user }) {
       {adding && (
         <AddResourceModal household={household} meId={meId} onClose={closeModal} onCreate={handleCreate} />
       )}
+
+      {editing && (
+        <EditActivityModal
+          activity={editing}
+          onClose={closeEdit}
+          onSave={handleSaveEdit}
+          onRequestDelete={handleRequestDelete}
+        />
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          message="This removes the activity for everyone sharing it, along with its turn order and history. It can’t be undone."
+          confirmLabel="Delete activity"
+          danger
+          busy={busyId === deleting.id}
+          error={deleteError}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
+
       <Toast toast={toast} onDone={hideToast} />
     </div>
   )

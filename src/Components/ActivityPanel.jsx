@@ -1,13 +1,16 @@
-import { Search, Check, Calendar, Settings, ClipboardList, KeyRound } from 'lucide-react'
-import { isRotation, formatFrequency, formatDue } from '../utils/activity.js'
+import { Search, Check, Calendar, Settings, Lock, ClipboardList, KeyRound } from 'lucide-react'
+import { isRotation, formatFrequency, formatDue, canManage, getOwnerName } from '../utils/activity.js'
 import TurnOrder from './TurnOrder.jsx'
 import Avatar from './Avatar.jsx'
 
-function ActivityRow({ activity, meId, busy, onMarkDone, onComingSoon }) {
+function ActivityRow({ activity, meId, busy, onMarkDone, onEdit, onComingSoon }) {
   const rotating = isRotation(activity)
   const rotation = activity.rotation
   const isMyTurn = rotating && rotation?.current_participant_id === meId
   const due = formatDue(rotation?.next_rotation_at)
+  // Only the person who added an activity can change or remove it.
+  const mine = canManage(activity, meId)
+  const owner = getOwnerName(activity, meId)
 
   return (
     <li className={`activity-row${isMyTurn ? ' my-turn' : ''}`}>
@@ -72,20 +75,37 @@ function ActivityRow({ activity, meId, busy, onMarkDone, onComingSoon }) {
       </div>
 
       <div className="col-actions">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label={`Edit ${activity.name}`}
-          onClick={() => onComingSoon('Editing activities')}
-        >
-          <Settings size={16} aria-hidden="true" />
-        </button>
+        {mine ? (
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={`Edit ${activity.name}`}
+            title="Edit or delete"
+            onClick={() => onEdit(activity)}
+          >
+            <Settings size={16} aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="icon-btn is-locked" title={`Only ${owner} can edit this activity`}>
+            <Lock size={15} aria-hidden="true" />
+            <span className="visually-hidden">{`Only ${owner} can edit ${activity.name}`}</span>
+          </span>
+        )}
       </div>
     </li>
   )
 }
 
-export default function ActivityPanel({ activities, meId, search, onSearch, busyId, onMarkDone, onComingSoon }) {
+export default function ActivityPanel({
+  activities,
+  meId,
+  search,
+  onSearch,
+  busyId,
+  onMarkDone,
+  onEdit,
+  onComingSoon,
+}) {
   const loading = activities === null
   const query = search.trim().toLowerCase()
   const visible = (activities || []).filter(activity => activity.name.toLowerCase().includes(query))
@@ -149,6 +169,7 @@ export default function ActivityPanel({ activities, meId, search, onSearch, busy
                 meId={meId}
                 busy={busyId === activity.id}
                 onMarkDone={onMarkDone}
+                onEdit={onEdit}
                 onComingSoon={onComingSoon}
               />
             ))}
