@@ -1,14 +1,23 @@
-import { Info } from 'lucide-react'
+import { Info, Users } from 'lucide-react'
 import Avatar from './Avatar.jsx'
 
-export default function MembersPanel({ household, email }) {
+export default function MembersPanel({ household, email, onManageMembers }) {
   return (
     <aside className="sidebar">
       <section className="panel" aria-labelledby="members-title">
         <div className="panel-header">
           <h2 id="members-title">Group members</h2>
           <p>People in your household</p>
+          <button
+            type="button"
+            className="manage-members-button"
+            onClick={onManageMembers}
+          >
+          <Users size={16} aria-hidden="true" />
+          Manage
+          </button>
         </div>
+        
         <ul className="member-list">
           {household.map(person => (
             <li className="member" key={person.id}>

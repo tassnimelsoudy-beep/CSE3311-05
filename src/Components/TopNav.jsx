@@ -4,7 +4,7 @@ import { logout } from '../services/authService.js'
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
-export default function TopNav({ name, onComingSoon, groups, selectedGroup, onSelectGroup }) {
+export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup }) {
   const [loggingOut, setLoggingOut] = useState(false)
 
   async function handleLogout() {
@@ -40,6 +40,10 @@ export default function TopNav({ name, onComingSoon, groups, selectedGroup, onSe
             </option>
           ))}
         </select>
+
+        <button onClick={onCreateGroup}>
+          + Create Group
+        </button>
       </div>
 
       <div className="topnav-right">

@@ -14,6 +14,7 @@ async function createGroup(groupName, groupCreator)
             .single()
 
         if (groupError) {
+              console.error("GROUP INSERT FAILED:", groupError)
             throw groupError
         }
 
@@ -25,12 +26,13 @@ async function createGroup(groupName, groupCreator)
             })
 
         if (memberError) {
+             console.error("GROUP MEMBER INSERT FAILED:", memberError)
             throw memberError
         }
 
 
-        console.log("successfully created: ", data)
-        return data
+        console.log("successfully created: ", group)
+        return group
     } catch (error)
     {
         console.error("Error inserting data: ", error.message)
@@ -40,6 +42,8 @@ async function createGroup(groupName, groupCreator)
 
 async function getGroupsForUser(groupMember)
 {
+     console.log("Loading groups for participant:", groupMember)
+
         try {
         const {data, error} = await supabase
         .from("group_members")
@@ -50,6 +54,7 @@ async function getGroupsForUser(groupMember)
         if (error) {
             throw error
         }
+        console.log("Membership rows returned:", data)
 
         const groups = data
             .map(member => member.groups)
