@@ -18,19 +18,29 @@ describe('createResource', () => {
     expect(supabase.from).not.toHaveBeenCalled()
   })
 
-  it('saves the name, description and sharing method', async () => {
+  it('saves the name, description, sharing method and who created it', async () => {
     const insert = fakeQuery({ data: { id: 1, name: 'Trash' }, error: null })
     supabase.from.mockReturnValueOnce(insert)
 
-    const result = await createResource('Trash', 'Bins out Sunday', 'Rotation')
+    const result = await createResource('Trash', 'Bins out Sunday', 'Rotation', 42)
 
     expect(supabase.from).toHaveBeenCalledWith('resources')
     expect(insert.insert).toHaveBeenCalledWith({
       name: 'Trash',
       description: 'Bins out Sunday',
       sharing_method: 'Rotation',
+      created_by: 42,
     })
     expect(result).toEqual({ id: 1, name: 'Trash' })
+  })
+
+  it('records no owner when the creator is not given', async () => {
+    const insert = fakeQuery({ data: { id: 1 }, error: null })
+    supabase.from.mockReturnValueOnce(insert)
+
+    await createResource('Trash', null, 'Rotation')
+
+    expect(insert.insert).toHaveBeenCalledWith(expect.objectContaining({ created_by: null }))
   })
 })
 

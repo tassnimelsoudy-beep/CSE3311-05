@@ -29,7 +29,7 @@ async function seed(me)
     ]
 
     await Promise.all(rotations.map(async plan => {
-        const resource = await createResource(plan.name, plan.description, 'Rotation')
+        const resource = await createResource(plan.name, plan.description, 'Rotation', me.id)
         if (!resource) return
         await addResourceMembers(resource.id, plan.order.map(person => person.id))
         const rotation = await createRotation(resource.id, ...plan.every)
@@ -39,7 +39,7 @@ async function seed(me)
     }))
 
     // A reservation-style item, shown so testers see the second sharing method.
-    const car = await createResource('Borrow the car', 'Honda Civic, parking spot 14.', 'Reservation')
+    const car = await createResource('Borrow the car', 'Honda Civic, parking spot 14.', 'Reservation', me.id)
     if (car) {
         await addResourceMembers(car.id, [me.id, alex.id, sam.id, jordan.id])
     }

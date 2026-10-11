@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase.js'
 
 // Creates a new resource in the "resources" table.
 // Requires a name and share method. Returns the new resource object, or null on failure.
-// description can be null
-async function createResource(resourceName, description, shareMethod)
+// description can be null.
+// createdBy is the participants.id of whoever is creating it. It decides who may
+// edit or delete the resource later; null means nobody owns it.
+async function createResource(resourceName, description, shareMethod, createdBy = null)
 {
     try {
         if (resourceName == null || shareMethod == null || !resourceName.trim() || !shareMethod.trim()) {
@@ -16,7 +18,8 @@ async function createResource(resourceName, description, shareMethod)
         .insert({
             name: resourceName, 
             description: description, 
-            sharing_method: shareMethod
+            sharing_method: shareMethod,
+            created_by: createdBy
         })
         .select()
         .single()
