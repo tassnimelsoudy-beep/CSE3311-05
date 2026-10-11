@@ -1,77 +1,143 @@
 import { useEffect, useState } from 'react'
 import { X, Search, UserPlus, Check } from 'lucide-react'
 import { getAllParticipants } from '../services/participantService.js'
-import {
-  getGroupMembers,
-  addGroupMember,
-} from '../services/groupService.js'
+
+import { getGroupMembers, addGroupMember, removeGroupMember} from '../services/groupService.js'
 
 export default function ({ groupId, onClose, onMembersChanged }) {
-  const [participants, setParticipants] = useState([])
-  const [members, setMembers] = useState([])
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [addingId, setAddingId] = useState(null)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+    const [participants, setParticipants] = useState([])
+    const [members, setMembers] = useState([])
+    const [search, setSearch] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [addingId, setAddingId] = useState(null)
+    const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
+    const [pendingAddIds, setPendingAddIds] = useState([])
+    const [removingId, setRemovingId] = useState(null)
 
-  async function loadData() {
+    async function loadData() {
     setLoading(true)
     setError('')
 
     const [allParticipants, groupMembers] = await Promise.all([
-      getAllParticipants(),
-      getGroupMembers(groupId),
+        getAllParticipants(),
+        getGroupMembers(groupId),
     ])
 
+
     if (allParticipants === null || groupMembers === null) {
-      setError('Could not load group members. Please try again.')
+        setError('Could not load group members. Please try again.')
     } else {
-      setParticipants(allParticipants)
-      setMembers(groupMembers)
+        setParticipants(allParticipants)
+        setMembers(groupMembers)
     }
 
     setLoading(false)
-  }
+    }
 
-  useEffect(() => {
+    useEffect(() => {
     if (groupId) loadData()
-  }, [groupId])
+    }, [groupId])
 
-  const memberIds = new Set(members.map(member => member.id))
+    const memberIds = new Set(members.map(member => member.id))
 
-  const filteredParticipants = participants.filter(person =>
-    person.name?.toLowerCase().includes(search.trim().toLowerCase())
-  )
+    const filteredMembers = members.filter(member =>
+    member.name.toLowerCase().includes(search.toLowerCase())
+    )
 
-  async function handleAdd(person) {
-    setAddingId(person.id)
-    setError('')
-    setSuccess('')
+    const filteredParticipants = participants.filter(person =>
+    !memberIds.has(person.id) &&
+    person.name.toLowerCase().includes(search.toLowerCase())
+    )
 
-    const result = await addGroupMember(person.id, groupId)
-    await onMembersChanged(); //just added
 
-    if (!result) {
-      setError(`Could not add ${person.name}. Please try again.`)
-      setAddingId(null)
-      return
+    function togglePendingAdd(id) {
+    setPendingAddIds(ids =>
+    ids.includes(id)
+        ? ids.filter(existingId => existingId !== id)
+        : [...ids, id]
+    )
     }
 
-    // Refresh the member list after a successful insert.
-    const updatedMembers = await getGroupMembers(groupId)
+    async function handleConfirmAdditions() {
+        setAddingId('confirm')
+        setError('')
+        setSuccess('')
 
-    if (updatedMembers === null) {
-      setError('Added the person, but could not refresh the member list.')
-    } else {
-      setMembers(updatedMembers)
-      setSuccess(`${person.name} was added to the group.`)
+        const addedNames = []
+        const failedNames = []
 
-        await onMembersChanged?.() 
+        for (const id of pendingAddIds) {
+            const person = participants.find(p => p.id === id)
+            const result = await addGroupMember(id, groupId)
+
+        if (result) {
+            addedNames.push(person?.name ?? 'Participant')
+        } else {
+            failedNames.push(person?.name ?? 'Participant')
+        }
+        }
+
+        const updatedMembers = await getGroupMembers(groupId)
+
+        if (updatedMembers !== null) {
+            setMembers(updatedMembers)
+            await onMembersChanged?.()
+        }
+
+        setPendingAddIds(
+        updatedMembers === null
+            ? pendingAddIds.filter(id => !addedNames.some(
+                name => participants.find(p => p.id === id)?.name === name
+            ))
+            : pendingAddIds.filter(id =>
+                !updatedMembers.some(member => member.id === id)
+            )
+        )
+
+        if (failedNames.length) {
+            setError(`Could not add: ${failedNames.join(', ')}.`)
+        }
+
+        if (addedNames.length) {
+            setSuccess(`Added: ${addedNames.join(', ')}.`)
+        }
+
+        setAddingId(null)
     }
 
-    setAddingId(null)
-  }
+    async function handleRemove(person) {
+        const confirmed = window.confirm(
+            `Remove ${person.name} from this group?`
+        )
+
+        if (!confirmed) return
+
+        setRemovingId(person.id)
+        setError('')
+        setSuccess('')
+
+        const result = await removeGroupMember(person.id, groupId)
+
+        if (!result) {
+            setError(`Could not remove ${person.name}. Please try again.`)
+            setRemovingId(null)
+            return
+        }
+
+        const updatedMembers = await getGroupMembers(groupId)
+
+        if (updatedMembers === null) {
+            setError('Removed the member, but could not refresh the list.')
+        } else {
+            setMembers(updatedMembers)
+            setPendingAddIds(ids => ids.filter(id => id !== person.id))
+            setSuccess(`${person.name} was removed from the group.`)
+            await onMembersChanged?.()
+        }
+
+        setRemovingId(null)
+}
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -112,52 +178,84 @@ export default function ({ groupId, onClose, onMembersChanged }) {
         {success && <p role="status" className="form-success">{success}</p>}
 
         {loading ? (
-          <p>Loading members...</p>
-        ) : (
-          <ul className="manage-members-list">
-            {filteredParticipants.map(person => {
-              const isMember = memberIds.has(person.id)
-              const isAdding = addingId === person.id
+            <p>Loading members...</p>
+            ) : (
+              <>
+              {/* Current group members */}
+              <h3 className="manage-members-heading">
+                Your Group ({filteredMembers.length})
+              </h3>
 
-              return (
-                <li key={person.id} className="manage-member-row">
-                  <div className="member-meta">
-                    <strong>{person.name}</strong>
-                    <span>{isMember ? 'Already in group' : 'Participant'}</span>
-                  </div>
+              <ul className="manage-members-list">
+                {filteredMembers.map(person => (
+                  <li key={person.id} className="manage-member-row">
+                    <div className="member-meta">
+                      <strong>{person.name}</strong>
+                      <span>Group member</span>
+                    </div>
 
-                  {isMember ? (
-                    <span className="member-status">
-                      <Check size={16} /> Added
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleAdd(person)}
-                      disabled={addingId !== null}
-                    >
-                      <UserPlus size={16} />
-                      {isAdding ? 'Adding...' : 'Add'}
+                    <button type="button" onClick={() => handleRemove(person)} disabled={removingId !== null || addingId !== null}>
+                      {removingId === person.id ? 'Removing...' : 'Remove'}
                     </button>
-                  )}
-                </li>
-              )
-            })}
+                  </li>
+                ))}
 
-            {filteredParticipants.length === 0 && (
-              <li className="empty-state">
-                No participants found.
-              </li>
-            )}
-          </ul>
+                {filteredMembers.length === 0 && (
+                  <li className="empty-state">
+                    No group members found.
+                  </li>
+                )}
+              </ul>
+
+          {/* Other users */}
+          <h3 className="manage-members-heading">
+            Other Users ({filteredParticipants.length})
+          </h3>
+
+          <ul className="manage-members-list">
+            {filteredParticipants.map(person => (
+          <li key={person.id} className="manage-member-row">
+            <div className="member-meta">
+              <strong>{person.name}</strong>
+              <span>Participant</span>
+            </div>
+
+            <button type="button" onClick={() => togglePendingAdd(person.id)} disabled={addingId !== null || removingId !== null}>
+              {pendingAddIds.includes(person.id)
+                ? 'Selected ✓'
+                : 'Add'}
+            </button>
+          </li>
+        ))}
+
+        {filteredParticipants.length === 0 && (
+        <li className="empty-state">
+            No other users found.
+        </li>
+        )}
+        </ul>
+
+        {/* Confirm selected additions */}
+        {pendingAddIds.length > 0 && (
+        <button 
+          type="button"
+          onClick={handleConfirmAdditions}
+          disabled={addingId !== null || removingId !== null}
+        >
+        {addingId === 'confirm'
+            ? 'Adding...'
+            : `Confirm additions (${pendingAddIds.length})`}
+          </button>
+          )}
+          </>
         )}
 
         <div className="modal-actions">
-          <button type="button" onClick={onClose}>
-            Done
-          </button>
+        <button type="button" onClick={onClose}>
+        Done
+        </button>
         </div>
-      </section>
-    </div>
+        </section>
+        </div>
   )
 }

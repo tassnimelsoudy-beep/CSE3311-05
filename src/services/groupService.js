@@ -96,7 +96,25 @@ async function addGroupMember(participantId, groupId)
     }
 }
 
+async function removeGroupMember(memberId, groupId) {
+    try {
+        const { data, error } = await supabase.rpc(
+            "remove_group_member",
+            {
+                target_group_id: groupId,
+                target_participant_id: memberId
+            }
+        )
 
+        if (error) throw error
+
+        console.log("Successfully removed group member:", data)
+        return data
+    } catch (error) {
+        console.error("Error removing group member:", error)
+        return null
+    }
+}
 
 async function getGroupMembers(groupId)
 {
@@ -131,5 +149,6 @@ export {
     createGroup,
     getGroupsForUser,
     addGroupMember,
-    getGroupMembers
+    getGroupMembers,
+    removeGroupMember
 }

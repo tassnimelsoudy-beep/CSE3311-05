@@ -72,57 +72,53 @@ export default function Home({ user }) {
   }, [user.id])
 
   useEffect(() => {
-  let active = true
+    let active = true
 
-  async function loadGroupActivities() {
-    if (!participant || !selectedGroup) {
-      setActivities([])
-      return
+    async function loadGroupActivities() {
+      if (!participant || !selectedGroup) {
+        setActivities([])
+        return
+      }
+
+      setActivities(null)
+
+      const list = await loadActivities(participant.id, selectedGroup.id)
+
+      if (active) {
+        setActivities(list || [])
+      }
     }
 
-    setActivities(null)
+    loadGroupActivities()
 
-    const list = await loadActivities(participant.id, selectedGroup.id)
-
-    if (active) {
-      setActivities(list || [])
+    return () => {
+      active = false
     }
-  }
+  }, [participant, selectedGroup])
 
-  loadGroupActivities()
+  useEffect(() => {
+    let active = true
 
-  return () => {
-    active = false
-  }
-}, [participant, selectedGroup])
+    async function fetchGroupMembers() {
+      if (!selectedGroup) {
+        setGroupMembers([])
+        return
+      }
 
-useEffect(() => {
-  let active = true
+      const members = await getGroupMembers(selectedGroup.id)
 
-  async function fetchGroupMembers() {
-    if (!selectedGroup) {
-      setGroupMembers(
-        (members || []).map(member => ({
-          ...member,
-          isYou: member.id === participant?.id
-        }))
-      )
-      return
+      if (active) {
+        setGroupMembers((members || []).map(member => ({...member, isYou: member.id === participant?.id})))
+      }
+      
     }
 
-    const members = await getGroupMembers(selectedGroup.id)
+    fetchGroupMembers()
 
-    if (active) {
-      setGroupMembers(members || [])
+    return () => {
+      active = false
     }
-  }
-
-  loadHouseholdMembers()
-
-  return () => {
-    active = false
-  }
-}, [selectedGroup])
+  }, [selectedGroup, participant])
 
   const showToast = useCallback(message => setToast({ id: Date.now(), message }), [])
   const hideToast = useCallback(() => setToast(null), [])
@@ -175,14 +171,25 @@ useEffect(() => {
   }
 
   async function loadHouseholdMembers() {
-  if (!selectedGroup) {
-    setGroupMembers([])
-    return
-  }
+    if (!selectedGroup || !participant) {
+      setGroupMembers([]);
+      return;
+    }
 
-  const members = await getGroupMembers(selectedGroup.id)
-  setGroupMembers(members || [])
-}
+    const [members, list] = await Promise.all([
+      getGroupMembers(selectedGroup.id),
+      loadActivities(participant.id, selectedGroup.id)
+    ]);
+
+    setGroupMembers(
+      (members || []).map(member => ({
+          ...member,
+          isYou: member.id === participant.id
+      }))
+    );
+
+    setActivities(list || []);
+  }
 
   return (
     <div className="home">
@@ -219,7 +226,7 @@ useEffect(() => {
 
     
       {adding && (        
-        <AddResourceModal household={household} meId={meId} groupId={selectedGroup?.id} onClose={closeModal} onCreate={handleCreate} />
+        <AddResourceModal household={groupMembers} meId={meId} groupId={selectedGroup?.id} onClose={closeModal} onCreate={handleCreate} />
       )}
 
       {showAddGroupModal && participant && (
@@ -229,6 +236,7 @@ useEffect(() => {
       {showManageMembers && (
       <ManageGroupMembersModal groupId={selectedGroup?.id} onClose={() => setShowManageMembers(false)}  onMembersChanged={loadHouseholdMembers}/>
       )}
+
       <Toast toast={toast} onDone={hideToast} />
     </div>
   )
