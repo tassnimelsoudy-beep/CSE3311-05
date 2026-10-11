@@ -197,9 +197,58 @@ button:disabled {
   transition: background 0.15s, color 0.15s;
 }
 
-.icon-btn:hover {
+.icon-btn:hover:not(:disabled) {
   background: var(--bg);
   color: var(--ink);
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+}
+
+/* Shown in place of the edit button on someone else's activity */
+.icon-btn.is-locked {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.btn-danger {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--danger);
+  color: #fff;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #8f1e17;
+}
+
+.btn-danger:disabled {
+  opacity: 0.7;
+}
+
+/* Quiet destructive action that sits alongside Cancel/Save */
+.btn-text-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-weight: 600;
+  color: var(--danger);
+  transition: background 0.15s;
+}
+
+.btn-text-danger:hover:not(:disabled) {
+  background: var(--danger-tint);
+}
+
+.btn-text-danger:disabled {
+  opacity: 0.5;
 }
 
 /* Loading screen shown while the saved session is checked */

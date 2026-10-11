@@ -604,11 +604,45 @@
   margin-top: 6px;
 }
 
+.modal-small {
+  max-width: 400px;
+}
+
+.confirm-message {
+  color: var(--ink-soft);
+  margin-bottom: 20px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 8px;
+}
+
+/* Delete on the left, Cancel/Save on the right */
+.modal-actions-split {
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-actions-split .modal-actions {
+  margin-top: 0;
+}
+
+@media (max-width: 420px) {
+  .modal-actions-split,
+  .modal-actions-split .modal-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .modal-actions-split button {
+    justify-content: center;
+    width: 100%;
+  }
 }
 
 /* ---------- Toast ---------- */
