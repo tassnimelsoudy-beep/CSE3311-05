@@ -5,7 +5,7 @@ import { fakeQuery } from './fakeSupabase.js'
 vi.mock('../lib/supabase.js', () => ({ supabase: { from: vi.fn() } }))
 
 import { supabase } from '../lib/supabase.js'
-import { createResource, addResourceMembers } from '../services/resourceService.js'
+import { createResource, addResourceMembers, deleteResource } from '../services/resourceService.js'
 import { addParticipant, getParticipants } from '../services/participantService.js'
 
 beforeEach(() => {
@@ -52,10 +52,29 @@ describe('addResourceMembers', () => {
     await addResourceMembers(5, [30, 10, 20])
 
     expect(insert.insert).toHaveBeenCalledWith([
-      { resource_id: 5, participant_id: 30, role: null, position: 1 },
-      { resource_id: 5, participant_id: 10, role: null, position: 2 },
-      { resource_id: 5, participant_id: 20, role: null, position: 3 },
+      { resource_id: 5, participant_id: 30, position: 1 },
+      { resource_id: 5, participant_id: 10, position: 2 },
+      { resource_id: 5, participant_id: 20, position: 3 },
     ])
+  })
+})
+
+describe('deleteResource', () => {
+  it('asks for the deleted rows back, so callers can tell success from failure', async () => {
+    const query = fakeQuery({ data: [{ id: 5 }], error: null })
+    supabase.from.mockReturnValueOnce(query)
+
+    const result = await deleteResource(5)
+
+    expect(query.select).toHaveBeenCalled()
+    expect(query.eq).toHaveBeenCalledWith('id', 5)
+    expect(result).toEqual([{ id: 5 }])
+  })
+
+  it('returns null when the delete fails', async () => {
+    supabase.from.mockReturnValueOnce(fakeQuery({ data: null, error: { message: 'nope' } }))
+
+    expect(await deleteResource(5)).toBeNull()
   })
 })
 
