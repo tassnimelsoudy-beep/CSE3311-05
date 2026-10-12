@@ -38,14 +38,14 @@ async function getParticipants(resourceId)
         const {data, error } = await supabase
         .from("resource_members")
         .select('participants(id, name)')
-        .not("user_id", "is", null)
+        .eq('resource_id', resourceId)
         .order("name", { ascending: true })
 
         if (error) {
             throw error
         }
 
-        return data
+        return data.map(row => row.participants);
     } catch (error)
     {
         console.error("Error fetching participants: ", error.message)
@@ -128,10 +128,11 @@ async function removeParticipant(participantId, resourceId)
 async function getAllParticipants()
 {
     try {
-        const {data, error} = await supabase
+        const {data, error } = await supabase
         .from("participants")
-        .select('id, name')
-        .order("name", {ascending: true})
+        .select('id, name, email')
+        .not("user_id", "is", null)
+        .order("name", { ascending: true })
 
         if (error) {
             throw error
