@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Home as HouseIcon, ChevronDown, Bell, LogOut } from 'lucide-react'
 import { logout } from '../services/authService.js'
+
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
-export default function TopNav({ name, onComingSoon }) {
+export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup }) {
   const [loggingOut, setLoggingOut] = useState(false)
 
   async function handleLogout() {
@@ -21,15 +22,30 @@ export default function TopNav({ name, onComingSoon }) {
           <span>Rotate</span>
         </div>
         <span className="topnav-divider" aria-hidden="true" />
-        <button
-          type="button"
+        <select
           className="group-label"
-          onClick={() => onComingSoon('Switching between households')}
+          value={selectedGroup?.id || ''}
+          onChange={e => {
+            const group = groups.find(g => g.id === e.target.value)
+            if (group) onSelectGroup(group)
+          }}
+          aria-label="Select group"
         >
-          <HouseIcon size={16} aria-hidden="true" />
-          <span>My household</span>
-          <ChevronDown size={14} aria-hidden="true" />
-        </button>
+          {!groups.length && (
+            <option value="">No groups yet</option>
+          )}
+
+          {groups.map(group => (
+            <option key={group.id} value={group.id}>
+              {group.name}
+            </option>
+          ))}
+        </select>
+
+      <button type="button" className="btn-ghost" onClick={onCreateGroup}>
+        <span aria-hidden="true">+</span>
+        Create Group
+      </button>
       </div>
 
       <div className="topnav-right">

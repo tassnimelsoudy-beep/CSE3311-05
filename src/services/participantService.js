@@ -38,13 +38,14 @@ async function getParticipants(resourceId)
         const {data, error } = await supabase
         .from("resource_members")
         .select('participants(id, name)')
-        .eq('resource_id', resourceId)
+        .not("user_id", "is", null)
+        .order("name", { ascending: true })
 
         if (error) {
             throw error
         }
 
-        return data.map(member => member.participants)
+        return data
     } catch (error)
     {
         console.error("Error fetching participants: ", error.message)

@@ -1,15 +1,19 @@
 // Combines the resource, participant and rotation services into what the
 // dashboard needs: each activity together with its members and rotation.
-import { getResourcesForUser, createResource, addResourceMembers } from './resourceService.js'
+import { getResourcesForUser, createResource, addResourceMembers, getResourcesForGroup } from './resourceService.js'
 import { getRotationParticipants, advanceIfDue, createRotation } from './rotationService.js'
 import { isRotation, sortActivities } from '../utils/activity.js'
 
 // Loads every activity the participant belongs to. Overdue turns are passed
 // on first (advanceIfDue), so the dashboard always shows whose turn it is now.
 // Returns an array, or null if loading failed.
-async function loadActivities(participantId)
+async function loadActivities(participantId, groupId)
 {
-    const resources = await getResourcesForUser(participantId)
+    if (!groupId) {
+        return []
+    } 
+
+    const resources = await getResourcesForGroup(groupId)
     if (!resources) {
         return null
     }
@@ -28,9 +32,14 @@ async function loadActivities(participantId)
 // Creates a rotating activity: the resource, its members in turn order
 // (first id goes first), and the rotation schedule.
 // Returns the new resource, or null if any step failed.
-async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds })
+async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, groupId })
 {
-    const resource = await createResource(name, description || null, 'Rotation')
+
+    if (!groupId) {
+        return null;
+    }
+
+    const resource = await createResource(name, description || null, 'Rotation', groupId)
     if (!resource) {
         return null
     }

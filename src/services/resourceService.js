@@ -4,22 +4,46 @@ import { supabase } from '../lib/supabase.js'
 // Creates a new resource in the "resources" table.
 // Requires a name and share method. Returns the new resource object, or null on failure.
 // description can be null
-async function createResource(resourceName, description, shareMethod)
+async function createResource(resourceName, description, shareMethod, groupId)
 {
     try {
+
+        const {
+            data: { user },
+            error: authError
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            throw new Error("You must be logged in.");
+        }
+
+        const { data: participant, error: participantError } =
+        await supabase
+            .from("participants")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+        if (participantError || !participant) {
+            throw new Error("Participant record not found.");
+        }
+
         if (resourceName == null || shareMethod == null || !resourceName.trim() || !shareMethod.trim()) {
             console.error("resource name or sharemethod cannot be empty")
             return null
         }
-         const {data, error } = await supabase
-        .from("resources")
-        .insert({
-            name: resourceName, 
-            description: description, 
-            sharing_method: shareMethod
-        })
-        .select()
-        .single()
+
+        const {data, error } = await supabase
+            .from("resources")
+            .insert({
+                name: resourceName, 
+                description: description, 
+                sharing_method: shareMethod,
+                created_by: participant.id,
+                group_id: groupId
+            })
+            .select()
+            .single()
 
         if (error) {
             throw error
@@ -135,7 +159,7 @@ async function getResourcesForUser(userId)
     try {
         const {data, error} = await supabase
         .from("resource_members")
-        .select('resources(id, name, description, sharing_method, created_at)')
+        .select('resources(id, name, description, sharing_method, created_at, created_by, group_id)')
         .eq("participant_id", userId)
         
         
@@ -154,10 +178,33 @@ async function getResourcesForUser(userId)
     }
 }
 
+//whoever is doing group can implement this
+async function getResourcesForGroup(groupId)
+{
+    try {
+        const {data, error} = await supabase
+        .from("resources")
+        .select('id, name, description, sharing_method, created_at, created_by, group_id')
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false });
+        
+        
+        if (error) {
+            throw error
+        }
+
+        return data
+    } catch (error)
+    {
+        console.error("Error retrieving data: ", error.message)
+        return null
+    }
+}
+
 // Adds a participant to a resource with a role (e.g. "owner" or "member") role can null.
 // position (position > 0 or null) is optional and can be used to order participants in a resource.
 // Creates the link row in resource_members.
-async function addResourceMember(resourceId, userId, userRole, userPosition)
+async function addResourceMember(resourceId, userId, userPosition)
 {
        try {
      
@@ -166,7 +213,6 @@ async function addResourceMember(resourceId, userId, userRole, userPosition)
         .insert({
             resource_id: resourceId, 
             participant_id: userId, 
-            role: userRole,
             position: userPosition
         })
         .select()
@@ -193,7 +239,6 @@ async function addResourceMembers(resourceId, participantIds)
         const rows = participantIds.map((participantId, index) => ({
             resource_id: resourceId,
             participant_id: participantId,
-            role: null,
             position: index + 1
         }))
 
@@ -221,5 +266,6 @@ export {
     updateResource, 
     deleteResource, 
     getResourcesForUser, 
+    getResourcesForGroup,
     addResourceMember,
     addResourceMembers }

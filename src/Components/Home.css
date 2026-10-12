@@ -598,6 +598,33 @@
   accent-color: var(--brand);
 }
 
+.participant-list {
+  max-height: 300px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.create-group-submit {
+  padding: 9px 14px;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.create-group-submit:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.create-group-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .hint {
   font-size: 0.85rem;
   color: var(--ink-soft);
