@@ -1,7 +1,6 @@
 // Combines the resource, participant and rotation services into what the
 // dashboard needs: each activity together with its members and rotation.
 import {
-    getResourcesForUser,
     getResourcesForGroup,
     createResource,
     addResourceMembers,
@@ -10,6 +9,7 @@ import {
 } from './resourceService.js'
 import { getRotationParticipants, advanceIfDue, createRotation, updateRotation } from './rotationService.js'
 import { isRotation, sortActivities } from '../utils/activity.js'
+import { getReservationsForResource } from './reservationService.js'
 
 // Loads the activities to show on the dashboard. Overdue turns are passed on
 // first (advanceIfDue), so it always shows whose turn it is now.
@@ -19,19 +19,22 @@ import { isRotation, sortActivities } from '../utils/activity.js'
 // Returns an array, or null if loading failed.
 async function loadActivities(participantId, groupId)
 {
-    const resources = groupId
-        ? await getResourcesForGroup(groupId)
-        : await getResourcesForUser(participantId)
+    if (!groupId) {
+        return []
+    } 
 
+    const resources = await getResourcesForGroup(groupId)
     if (!resources) {
         return null
     }
 
     const activities = await Promise.all(
         resources.filter(Boolean).map(async resource => {
-            const members = (await getRotationParticipants(resource.id)) || []
-            const rotation = isRotation(resource) ? await advanceIfDue(resource.id) : null
-            return { ...resource, members, rotation }
+            const rotating = isRotation(resource)
+            const members = rotating ? (await getRotationParticipants(resource.id)) || [] : []
+            const rotation = rotating ? await advanceIfDue(resource.id) : null
+            const reservations = rotating ? [] : await getReservationsForResource(resource.id)
+            return { ...resource, members, rotation, reservations: reservations || [] }
         })
     )
 
@@ -44,6 +47,11 @@ async function loadActivities(participantId, groupId)
 // Returns the new resource, or null if any step failed.
 async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, groupId })
 {
+
+    if (!groupId) {
+        return null;
+    }
+
     const resource = await createResource(name, description || null, 'Rotation', groupId)
     if (!resource) {
         return null
@@ -107,4 +115,19 @@ async function deleteActivity(resourceId)
     return result !== null
 }
 
-export { loadActivities, createRotatingActivity, updateActivity, deleteActivity }
+async function createReservationActivity({ name, description, groupId }) {
+    if (!groupId) {
+        return null
+    }
+
+    return createResource(name, description || null, 'Reservation', groupId)
+}
+
+export {
+    loadActivities,
+    createRotatingActivity,
+    createReservationActivity,
+    updateActivity,
+    deleteActivity
+}
+

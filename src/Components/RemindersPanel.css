@@ -1,0 +1,118 @@
+
+/* Main reminders panel */
+.reminders-panel {
+  padding: 24px;
+  margin-top: 20px;
+  border: 1px solid #dce5e1;
+  border-radius: 24px;
+  background: #ffffff;
+}
+
+/* Header */
+.reminders-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.reminders-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #193c34;
+}
+
+.reminders-header h2 svg {
+  color: #237464;
+}
+
+/* Close button */
+.reminders-header button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: #526660;
+  cursor: pointer;
+}
+
+.reminders-header button:hover {
+  background: #e1ebe6;
+}
+
+/* Reminder list */
+.reminders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Individual reminder */
+.reminder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid #e6ece8;
+  border-radius: 14px;
+  background: #f8faf9;
+}
+
+.reminder-item strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #193c34;
+}
+
+.reminder-item p {
+  margin: 0;
+  font-size: 13px;
+  color: #647670;
+}
+
+/* Due date badges */
+.reminder-date,
+.reminder-overdue {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reminder-date {
+  background: #e3f0eb;
+  color: #237464;
+}
+
+.reminder-overdue {
+  background: #fff0db;
+  color: #a15b09;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .reminders-panel {
+    padding: 18px;
+  }
+
+  .reminder-item {
+    padding: 14px;
+  }
+
+  .reminders-header h2 {
+    font-size: 18px;
+  }
+}

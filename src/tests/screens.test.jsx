@@ -10,6 +10,16 @@ vi.mock('../services/authService.js', () => ({
   logout: vi.fn(),
   onAuthChange: vi.fn(),
 }))
+vi.mock('../services/groupService.js', () => ({
+  getGroupsForUser: vi.fn(() => Promise.resolve([{ id: 'g1', name: 'Apartment 4B' }])),
+  getGroupMembers: vi.fn(() =>
+    Promise.resolve([
+      { id: 1, name: 'Sarah Miller' },
+      { id: 2, name: 'Alex Chen' },
+    ])
+  ),
+}))
+vi.mock('../services/reservationService.js', () => ({ createReservation: vi.fn() }))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
 }))
@@ -17,6 +27,7 @@ vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(),
   createRotatingActivity: vi.fn(),
+  createReservationActivity: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
@@ -42,6 +53,7 @@ vi.mock('../services/activityService.js', () => ({
     ])
   ),
   createRotatingActivity: vi.fn(),
+  createReservationActivity: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
 }))

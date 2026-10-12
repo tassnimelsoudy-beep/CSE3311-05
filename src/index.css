@@ -262,6 +262,27 @@ button:disabled {
   animation: splash-spin 1.2s linear infinite;
 }
 
+/*new manage members button*/
+.manage-members-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.manage-members-button:hover {
+  background: var(--surface-hover, #f3f4f6);
+}
+
 @keyframes splash-spin {
   to {
     transform: rotate(360deg);

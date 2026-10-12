@@ -206,13 +206,11 @@ async function getResourcesForGroup(groupId)
     }
 }
 
-// Adds a participant to a resource.
+// Adds a participant to a resource. The "role" column was removed from
+// resource_members; ownership lives in resources.created_by instead.
 // position (position > 0 or null) is optional and can be used to order participants in a resource.
 // Creates the link row in resource_members.
-// userRole is still accepted so existing callers keep working, but it is no
-// longer stored: the "role" column was removed from resource_members, and
-// ownership now lives in resources.created_by instead.
-async function addResourceMember(resourceId, userId, userRole, userPosition)
+async function addResourceMember(resourceId, userId, userPosition)
 {
        try {
      
