@@ -1,8 +1,9 @@
 // Combines the resource, participant and rotation services into what the
 // dashboard needs: each activity together with its members and rotation.
-import { getResourcesForUser, createResource, addResourceMembers, getResourcesForGroup } from './resourceService.js'
+import { createResource, addResourceMembers, getResourcesForGroup } from './resourceService.js'
 import { getRotationParticipants, advanceIfDue, createRotation } from './rotationService.js'
 import { isRotation, sortActivities } from '../utils/activity.js'
+import { getReservationsForResource } from './reservationService.js'
 
 // Loads every activity the participant belongs to. Overdue turns are passed
 // on first (advanceIfDue), so the dashboard always shows whose turn it is now.
@@ -20,9 +21,11 @@ async function loadActivities(participantId, groupId)
 
     const activities = await Promise.all(
         resources.filter(Boolean).map(async resource => {
-            const members = (await getRotationParticipants(resource.id)) || []
-            const rotation = isRotation(resource) ? await advanceIfDue(resource.id) : null
-            return { ...resource, members, rotation }
+            const rotating = isRotation(resource)
+            const members = rotating ? (await getRotationParticipants(resource.id)) || [] : []
+            const rotation = rotating ? await advanceIfDue(resource.id) : null
+            const reservations = rotating ? [] : await getReservationsForResource(resource.id)
+            return { ...resource, members, rotation, reservations: reservations || [] }
         })
     )
 
@@ -53,4 +56,12 @@ async function createRotatingActivity({ name, description, frequencyValue, frequ
     return rotation ? resource : null
 }
 
-export { loadActivities, createRotatingActivity }
+async function createReservationActivity({ name, description, groupId }) {
+    if (!groupId) {
+        return null
+    }
+
+    return createResource(name, description || null, 'Reservation', groupId)
+}
+
+export { loadActivities, createRotatingActivity, createReservationActivity }

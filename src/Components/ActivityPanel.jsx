@@ -1,9 +1,8 @@
 import { Search, Check, Calendar, Settings, ClipboardList, KeyRound } from 'lucide-react'
 import { isRotation, formatFrequency, formatDue } from '../utils/activity.js'
 import TurnOrder from './TurnOrder.jsx'
-import Avatar from './Avatar.jsx'
 
-function ActivityRow({ activity, meId, busy, onMarkDone, onComingSoon }) {
+function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onReserve, onComingSoon }) {
   const rotating = isRotation(activity)
   const rotation = activity.rotation
   const isMyTurn = rotating && rotation?.current_participant_id === meId
@@ -51,15 +50,29 @@ function ActivityRow({ activity, meId, busy, onMarkDone, onComingSoon }) {
         {rotating ? (
           <TurnOrder members={activity.members} currentId={rotation?.current_participant_id} meId={meId} />
         ) : (
-          <div className="shared-by">
-            <span className="avatar-stack" aria-hidden="true">
-              {activity.members.slice(0, 4).map(member => (
-                <Avatar key={member.id} name={member.name} size={26} />
-              ))}
-            </span>
-            <button type="button" className="btn-small" onClick={() => onComingSoon('Reserving shared items')}>
+          <div className="reservation-column">
+            {(activity.reservations || []).length > 0 ? (
+              <ul className="reservation-list" aria-label={`Reservations for ${activity.name}`}>
+                {activity.reservations.map(reservation => (
+                  <li key={reservation.id}>
+                    <strong>{reservation.participants?.name || 'Group member'}</strong>
+                    <span>
+                      {new Date(reservation.starts_at).toLocaleString()} – {new Date(reservation.ends_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="available">No upcoming reservations</span>
+            )}
+            <button
+              type="button"
+              className="btn-small"
+              onClick={() => onReserve(activity)}
+              disabled={reservationBusy}
+            >
               <KeyRound size={14} aria-hidden="true" />
-              Reserve
+              {reservationBusy ? 'Reserving…' : 'Reserve'}
             </button>
           </div>
         )}
@@ -85,7 +98,17 @@ function ActivityRow({ activity, meId, busy, onMarkDone, onComingSoon }) {
   )
 }
 
-export default function ActivityPanel({ activities, meId, search, onSearch, busyId, onMarkDone, onComingSoon }) {
+export default function ActivityPanel({
+  activities,
+  meId,
+  search,
+  onSearch,
+  busyId,
+  reservationBusyId,
+  onMarkDone,
+  onReserve,
+  onComingSoon,
+}) {
   const loading = activities === null
   const query = search.trim().toLowerCase()
   const visible = (activities || []).filter(activity => activity.name.toLowerCase().includes(query))
@@ -137,7 +160,7 @@ export default function ActivityPanel({ activities, meId, search, onSearch, busy
             <span />
             <span>Activity</span>
             <span>Type</span>
-            <span>Turn order</span>
+            <span>Schedule</span>
             <span>Repeats</span>
             <span />
           </div>
@@ -148,7 +171,9 @@ export default function ActivityPanel({ activities, meId, search, onSearch, busy
                 activity={activity}
                 meId={meId}
                 busy={busyId === activity.id}
+                reservationBusy={reservationBusyId === activity.id}
                 onMarkDone={onMarkDone}
+                onReserve={onReserve}
                 onComingSoon={onComingSoon}
               />
             ))}

@@ -2,16 +2,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { getCurrentParticipant } from '../services/participantService.js'
 import { advanceTurn } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
-import { loadActivities, createRotatingActivity } from '../services/activityService.js'
-import { loadActivitiesWithDemo } from '../services/demoService.js'
+import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
+import { createReservation } from '../services/reservationService.js'
 import { getDisplayName } from '../utils/avatar.js'
-import { getHousehold, getNextUp } from '../utils/activity.js'
+import { getNextUp } from '../utils/activity.js'
 import TopNav from './TopNav.jsx'
 import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
 import RemindersPanel from './RemindersPanel.jsx'
 import MembersPanel from './MembersPanel.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
+import ReservationModal from './ReservationModal.jsx'
 import AddGroupModal from "./AddGroupModal"
 import ManageGroupMembersModal from './ManageGroupMembersModal.jsx'
 import Toast from './Toast.jsx'
@@ -25,6 +26,8 @@ export default function Home({ user }) {
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [reserving, setReserving] = useState(null)
+  const [reservationBusyId, setReservationBusyId] = useState(null)
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [showManageMembers, setShowManageMembers] = useState(false)
   const [groupMembers, setGroupMembers] = useState([])
@@ -41,9 +44,12 @@ export default function Home({ user }) {
       if (!active) return
       setParticipant(me)
       if (!me) {
-        // setActivities([])
         setGroups([])
         setSelectedGroup(null)
+        setToast({
+          id: Date.now(),
+          message: "Couldn’t load your participant profile. Please ask your project administrator to check participant setup.",
+        })
         return
       }
 
@@ -130,7 +136,6 @@ export default function Home({ user }) {
   const name = getDisplayName(participant, user)
   const firstName = name.split(' ')[0]
   const meId = participant?.id
-  const household = getHousehold(activities || [], participant ? { id: meId, name } : null)
 
   async function handleMarkDone(activity) {
     setBusyId(activity.id)
@@ -152,7 +157,9 @@ export default function Home({ user }) {
     if (!selectedGroup) {
       return 'Please select a group first.'
     }
-    const created = await createRotatingActivity(values)
+    const created = values.sharingMethod === 'Reservation'
+      ? await createReservationActivity(values)
+      : await createRotatingActivity(values)
     if (!created) {
       return 'Couldn’t add the activity. Try again.'
     }
@@ -160,6 +167,30 @@ export default function Home({ user }) {
     if (list) setActivities(list)
     setAdding(false)
     showToast(`Added ${values.name}.`)
+    return null
+  }
+
+  async function handleReserve({ resource, startsAt, endsAt }) {
+    setReservationBusyId(resource.id)
+    const result = await createReservation({
+      resourceId: resource.id,
+      participantId: meId,
+      startsAt,
+      endsAt,
+    })
+    setReservationBusyId(null)
+
+    if (result.error) return result.error
+
+    const reservation = { ...result.reservation, participants: { id: meId, name } }
+    setActivities(list => list.map(activity =>
+      activity.id === resource.id
+        ? { ...activity, reservations: [...(activity.reservations || []), reservation]
+          .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)) }
+        : activity
+    ))
+    setReserving(null)
+    showToast(`Reserved ${resource.name}.`)
     return null
   }
 
@@ -210,7 +241,9 @@ export default function Home({ user }) {
               search={search}
               onSearch={setSearch}
               busyId={busyId}
+              reservationBusyId={reservationBusyId}
               onMarkDone={handleMarkDone}
+              onReserve={setReserving}
               onComingSoon={comingSoon}
             />
             <NextUpBar
@@ -238,6 +271,14 @@ export default function Home({ user }) {
     
       {adding && (        
         <AddResourceModal household={groupMembers} meId={meId} groupId={selectedGroup?.id} onClose={closeModal} onCreate={handleCreate} />
+      )}
+
+      {reserving && (
+        <ReservationModal
+          resource={reserving}
+          onClose={() => setReserving(null)}
+          onReserve={handleReserve}
+        />
       )}
 
       {showAddGroupModal && participant && (

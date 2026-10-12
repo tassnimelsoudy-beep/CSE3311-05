@@ -4,8 +4,9 @@ CSE 3311 Group 5
 ## Running the app
 
 1. Create a `.env` file next to `package.json` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISH_KEY`.
-2. `npm install`
-3. `npm run dev`, then open the local address it prints.
+2. Apply `supabase/migrations/20261012000000_create_reservations.sql` to the Supabase project.
+3. `npm install`
+4. `npm run dev`, then open the local address it prints.
 
 ## Running tests
 
@@ -17,6 +18,8 @@ Tests live in `src/tests/` and never contact the real database; Supabase is repl
 | --- | --- |
 | `rotationLogic.test.js` | Who goes next, wrapping around, due-date math (month ends; each completion moves the date forward; missed turns) |
 | `rotationService.test.js` | Advancing a turn and saving it; advancing only when overdue |
+| `reservationService.test.js` | Validating reservation times; rejecting overlaps; handling database conflicts |
+| `reservationUI.test.jsx` | Creating reservation resources; displaying reservations and opening the booking form |
 | `dataServices.test.js` | Rejecting blank names; saving resources; members saved in turn order; reading a resource's members |
 | `activityHelpers.test.js` | Dashboard labels ("Weekly", "Due Friday"), turn order display, who is in the household, what's up next |
 | `authService.test.js` | Sign-up sends the user's name; readable login/sign-up errors |

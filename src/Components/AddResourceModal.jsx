@@ -9,7 +9,7 @@ const UNITS = [
   { value: 'month', label: 'months' },
 ]
 
-// Form for adding a new shared activity (a resource shared by rotation).
+// Form for adding a shared resource, either as a rotation or a reservation.
 //
 // - household: people who can be added ({ id, name, isYou }). Passed in rather
 //   than fetched with getAllParticipants, because that would list every
@@ -18,11 +18,11 @@ const UNITS = [
 // - onCreate(values): saves the activity. Returns an error message, or null
 //   on success (the parent then closes the modal).
 //
-// People take turns in the order they're ticked.
+// Rotation participants take turns in the order they're ticked.
 export default function AddResourceModal({ household, meId, groupId, onClose, onCreate }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [sharingMethod] = useState('Rotation') // reservations come in a later version
+  const [sharingMethod, setSharingMethod] = useState('Rotation')
   const [frequencyValue, setFrequencyValue] = useState('1')
   const [frequencyUnit, setFrequencyUnit] = useState('week')
   const [selectedIds, setSelectedIds] = useState(meId ? [meId] : []) // array keeps turn order
@@ -57,11 +57,11 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
       setError('Give the activity a name.')
       return
     }
-    if (!Number.isInteger(every) || every < 1) {
+    if (sharingMethod === 'Rotation' && (!Number.isInteger(every) || every < 1)) {
       setError('Choose how often it repeats (1 or more).')
       return
     }
-    if (selectedIds.length === 0) {
+    if (sharingMethod === 'Rotation' && selectedIds.length === 0) {
       setError('Choose at least one person to take turns.')
       return
     }
@@ -70,6 +70,7 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
     const failure = await onCreate({
       name: name.trim(),
       description: description.trim(),
+      sharingMethod,
       frequencyValue: every,
       frequencyUnit,
       memberIds: selectedIds,
@@ -122,53 +123,67 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
           <div className="field">
             <span className="field-label">How it’s shared</span>
             <div className="choice-row">
-              <span className="choice selected">{sharingMethod === 'Rotation' ? 'Take turns' : sharingMethod}</span>
-              <span className="choice disabled" title="Coming in a later version">
-                Reserve it (coming soon)
-              </span>
+            {[
+              { value: 'Rotation', label: 'Take turns' },
+              { value: 'Reservation', label: 'Reserve it' },
+            ].map(option => (
+              <button
+                key={option.value}
+                type="button"
+                className={`choice${sharingMethod === option.value ? ' selected' : ''}`}
+                aria-pressed={sharingMethod === option.value}
+                onClick={() => setSharingMethod(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
             </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="activity-every">Repeats every</label>
-            <div className="repeat-row">
-              <input
-                id="activity-every"
-                type="number"
-                min="1"
-                inputMode="numeric"
-                value={frequencyValue}
-                onChange={e => setFrequencyValue(e.target.value)}
-              />
-              <select aria-label="Repeat unit" value={frequencyUnit} onChange={e => setFrequencyUnit(e.target.value)}>
-                {UNITS.map(unit => (
-                  <option key={unit.value} value={unit.value}>
-                    {unit.label}
-                  </option>
-                ))}
-              </select>
+          {sharingMethod === 'Rotation' && (
+            <>
+            <div className="field">
+              <label htmlFor="activity-every">Repeats every</label>
+              <div className="repeat-row">
+                <input
+                  id="activity-every"
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  value={frequencyValue}
+                  onChange={e => setFrequencyValue(e.target.value)}
+                />
+                <select aria-label="Repeat unit" value={frequencyUnit} onChange={e => setFrequencyUnit(e.target.value)}>
+                  {UNITS.map(unit => (
+                    <option key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
 
-          <fieldset className="field member-picker">
-            <legend className="field-label">Who takes turns</legend>
-            {household && household.length > 0 ? (
-              household.map(p => (
-                <label key={p.id} className="member-option">
-                  <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
-                  <Avatar name={p.name} size={28} />
-                  <span>{p.isYou ? `${p.name} (you)` : p.name}</span>
-                </label>
-              ))
-            ) : (
-              <div className="hint">No participants available</div>
-            )}
-            <p className="hint">
-              {selectedIds.length > 0
-                ? `Turn order: ${selectedIds.map(labelFor).join(', then ')}.`
-                : 'People take turns in the order you tick them.'}
-            </p>
-          </fieldset>
+            <fieldset className="field member-picker">
+              <legend className="field-label">Who takes turns</legend>
+              {household && household.length > 0 ? (
+                household.map(p => (
+                  <label key={p.id} className="member-option">
+                    <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
+                    <Avatar name={p.name} size={28} />
+                    <span>{p.isYou ? `${p.name} (you)` : p.name}</span>
+                  </label>
+                ))
+              ) : (
+                <div className="hint">No participants available</div>
+              )}
+              <p className="hint">
+                {selectedIds.length > 0
+                  ? `Turn order: ${selectedIds.map(labelFor).join(', then ')}.`
+                  : 'People take turns in the order you tick them.'}
+              </p>
+            </fieldset>
+            </>
+          )}
 
           {error && (
             <p className="auth-error" role="alert">
