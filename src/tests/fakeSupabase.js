@@ -7,7 +7,7 @@ import { vi } from 'vitest'
 
 export function fakeQuery(result) {
   const query = {}
-  for (const step of ['select', 'insert', 'update', 'delete', 'eq', 'order']) {
+  for (const step of ['select', 'insert', 'update', 'delete', 'eq', 'gt', 'gte', 'lt', 'order']) {
     query[step] = vi.fn(() => query)
   }
   query.single = vi.fn(() => Promise.resolve(result))
