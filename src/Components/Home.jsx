@@ -9,6 +9,7 @@ import { getHousehold, getNextUp } from '../utils/activity.js'
 import TopNav from './TopNav.jsx'
 import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
+import RemindersPanel from './RemindersPanel.jsx'
 import MembersPanel from './MembersPanel.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
 import AddGroupModal from "./AddGroupModal"
@@ -27,6 +28,7 @@ export default function Home({ user }) {
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [showManageMembers, setShowManageMembers] = useState(false)
   const [groupMembers, setGroupMembers] = useState([])
+  const [showReminders, setShowReminders] = useState(false)
   const [toast, setToast] = useState(null)
 
 
@@ -216,8 +218,17 @@ export default function Home({ user }) {
               meId={meId}
               onAdd={() => setAdding(true)}
               onComingSoon={comingSoon}
+              onCheckUpcoming={() => setShowReminders(true)}
               disabled={!participant || activities === null}
-            />
+            /> 
+            {showReminders && (
+  <RemindersPanel
+    activities={activities}
+    meId={meId}
+    onClose={() => setShowReminders(false)}
+  />
+)}
+            
           </div>
 
           <MembersPanel household={groupMembers} email={user.email} onManageMembers={() => setShowManageMembers(true)} />
