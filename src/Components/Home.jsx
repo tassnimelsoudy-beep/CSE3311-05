@@ -8,6 +8,7 @@ import { getHousehold, getNextUp } from '../utils/activity.js'
 import TopNav from './TopNav.jsx'
 import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
+import RemindersPanel from './RemindersPanel.jsx'
 import MembersPanel from './MembersPanel.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
 import Toast from './Toast.jsx'
@@ -19,6 +20,7 @@ export default function Home({ user }) {
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [showReminders, setShowReminders] = useState(false)
   const [toast, setToast] = useState(null)
 
   // Find this account's participant, then load (or, for a new account, create)
@@ -103,8 +105,17 @@ export default function Home({ user }) {
               meId={meId}
               onAdd={() => setAdding(true)}
               onComingSoon={comingSoon}
+              onCheckUpcoming={() => setShowReminders(true)}
               disabled={!participant || activities === null}
-            />
+            /> 
+            {showReminders && (
+  <RemindersPanel
+    activities={activities}
+    meId={meId}
+    onClose={() => setShowReminders(false)}
+  />
+)}
+            
           </div>
 
           <MembersPanel household={household} email={user.email} />

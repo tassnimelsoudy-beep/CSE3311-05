@@ -13,7 +13,7 @@ function describe(nextUp, meId) {
   return `Up next: it’s ${who} turn for ${activity.name}, due ${due}.`
 }
 
-export default function NextUpBar({ nextUp, meId, onAdd, onComingSoon, disabled }) {
+export default function NextUpBar({ nextUp, meId, onAdd, onCheckUpcoming, disabled }) {
   return (
     <div className="panel next-up">
       <div className="next-up-message">
@@ -23,7 +23,7 @@ export default function NextUpBar({ nextUp, meId, onAdd, onComingSoon, disabled 
         <p>{describe(nextUp, meId)}</p>
       </div>
       <div className="next-up-actions">
-        <button type="button" className="btn-secondary" onClick={() => onComingSoon('The upcoming turns calendar')}>
+        <button type="button" className="btn-secondary" onClick={onCheckUpcoming}>
           <CalendarRange size={16} aria-hidden="true" />
           Check upcoming
         </button>
