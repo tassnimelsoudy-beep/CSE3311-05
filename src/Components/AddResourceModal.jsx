@@ -19,7 +19,7 @@ const UNITS = [
 //   on success (the parent then closes the modal).
 //
 // People take turns in the order they're ticked.
-export default function AddResourceModal({ household, meId, onClose, onCreate }) {
+export default function AddResourceModal({ household, meId, groupId, onClose, onCreate }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [sharingMethod] = useState('Rotation') // reservations come in a later version
@@ -64,6 +64,7 @@ export default function AddResourceModal({ household, meId, onClose, onCreate })
       frequencyValue: every,
       frequencyUnit,
       memberIds: selectedIds,
+      groupId
     })
     if (failure) {
       // creation failed - keep modal open

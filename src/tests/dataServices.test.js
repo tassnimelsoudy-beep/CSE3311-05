@@ -2,7 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fakeQuery } from './fakeSupabase.js'
 
-vi.mock('../lib/supabase.js', () => ({ supabase: { from: vi.fn() } }))
+vi.mock('../lib/supabase.js', () => ({
+  supabase: { from: vi.fn(), auth: { getUser: vi.fn() } },
+}))
 
 import { supabase } from '../lib/supabase.js'
 import { createResource, addResourceMembers, deleteResource } from '../services/resourceService.js'
@@ -13,34 +15,41 @@ beforeEach(() => {
 })
 
 describe('createResource', () => {
-  it('refuses a blank name without contacting the database', async () => {
-    expect(await createResource('   ', null, 'Rotation')).toBeNull()
-    expect(supabase.from).not.toHaveBeenCalled()
+  // createResource looks up the logged-in participant itself, so the fake has
+  // to answer that lookup before the insert.
+  function signedInAs(participantId) {
+    supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'auth-1' } }, error: null })
+    supabase.from.mockReturnValueOnce(fakeQuery({ data: { id: participantId }, error: null }))
+  }
+
+  it('refuses a blank name without writing anything', async () => {
+    signedInAs(42)
+
+    expect(await createResource('   ', null, 'Rotation', 9)).toBeNull()
+    expect(supabase.from).toHaveBeenCalledTimes(1) // only the participant lookup
   })
 
-  it('saves the name, description, sharing method and who created it', async () => {
+  it('saves the name, description, group and the logged-in owner', async () => {
+    signedInAs(42)
     const insert = fakeQuery({ data: { id: 1, name: 'Trash' }, error: null })
     supabase.from.mockReturnValueOnce(insert)
 
-    const result = await createResource('Trash', 'Bins out Sunday', 'Rotation', 42)
+    const result = await createResource('Trash', 'Bins out Sunday', 'Rotation', 9)
 
-    expect(supabase.from).toHaveBeenCalledWith('resources')
     expect(insert.insert).toHaveBeenCalledWith({
       name: 'Trash',
       description: 'Bins out Sunday',
       sharing_method: 'Rotation',
       created_by: 42,
+      group_id: 9,
     })
     expect(result).toEqual({ id: 1, name: 'Trash' })
   })
 
-  it('records no owner when the creator is not given', async () => {
-    const insert = fakeQuery({ data: { id: 1 }, error: null })
-    supabase.from.mockReturnValueOnce(insert)
+  it('refuses to create anything when nobody is logged in', async () => {
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null }, error: null })
 
-    await createResource('Trash', null, 'Rotation')
-
-    expect(insert.insert).toHaveBeenCalledWith(expect.objectContaining({ created_by: null }))
+    expect(await createResource('Trash', null, 'Rotation', 9)).toBeNull()
   })
 })
 

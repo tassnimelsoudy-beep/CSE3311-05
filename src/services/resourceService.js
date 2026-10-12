@@ -3,26 +3,47 @@ import { supabase } from '../lib/supabase.js'
 
 // Creates a new resource in the "resources" table.
 // Requires a name and share method. Returns the new resource object, or null on failure.
-// description can be null.
-// createdBy is the participants.id of whoever is creating it. It decides who may
-// edit or delete the resource later; null means nobody owns it.
-async function createResource(resourceName, description, shareMethod, createdBy = null)
+// description can be null
+async function createResource(resourceName, description, shareMethod, groupId)
 {
     try {
+
+        const {
+            data: { user },
+            error: authError
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            throw new Error("You must be logged in.");
+        }
+
+        const { data: participant, error: participantError } =
+        await supabase
+            .from("participants")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+        if (participantError || !participant) {
+            throw new Error("Participant record not found.");
+        }
+
         if (resourceName == null || shareMethod == null || !resourceName.trim() || !shareMethod.trim()) {
             console.error("resource name or sharemethod cannot be empty")
             return null
         }
-         const {data, error } = await supabase
-        .from("resources")
-        .insert({
-            name: resourceName, 
-            description: description, 
-            sharing_method: shareMethod,
-            created_by: createdBy
-        })
-        .select()
-        .single()
+
+        const {data, error } = await supabase
+            .from("resources")
+            .insert({
+                name: resourceName, 
+                description: description, 
+                sharing_method: shareMethod,
+                created_by: participant.id,
+                group_id: groupId
+            })
+            .select()
+            .single()
 
         if (error) {
             throw error
@@ -143,7 +164,7 @@ async function getResourcesForUser(userId)
     try {
         const {data, error} = await supabase
         .from("resource_members")
-        .select('resources(id, name, description, sharing_method, created_at)')
+        .select('resources(id, name, description, sharing_method, created_at, created_by, group_id)')
         .eq("participant_id", userId)
         
         
@@ -155,6 +176,29 @@ async function getResourcesForUser(userId)
         resources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         console.log("successfully retrieved recourses: ", data)
         return resources
+    } catch (error)
+    {
+        console.error("Error retrieving data: ", error.message)
+        return null
+    }
+}
+
+//whoever is doing group can implement this
+async function getResourcesForGroup(groupId)
+{
+    try {
+        const {data, error} = await supabase
+        .from("resources")
+        .select('id, name, description, sharing_method, created_at, created_by, group_id')
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false });
+        
+        
+        if (error) {
+            throw error
+        }
+
+        return data
     } catch (error)
     {
         console.error("Error retrieving data: ", error.message)
@@ -230,5 +274,6 @@ export {
     updateResource, 
     deleteResource, 
     getResourcesForUser, 
+    getResourcesForGroup,
     addResourceMember,
     addResourceMembers }

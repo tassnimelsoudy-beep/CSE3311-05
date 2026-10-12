@@ -19,7 +19,7 @@ vi.mock('../services/participantService.js', () => ({
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
-  loadActivities: vi.fn(),
+  loadActivities: vi.fn(() => Promise.resolve(globalThis.__activities)),
   createRotatingActivity: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
@@ -51,15 +51,14 @@ function activity(overrides) {
 const mine = activity()
 const theirs = activity({ id: 8, name: 'Clean the kitchen', created_by: 2 })
 
-vi.mock('../services/demoService.js', () => ({
-  loadActivitiesWithDemo: vi.fn(() => Promise.resolve(globalThis.__activities)),
-}))
 
-import { updateActivity, deleteActivity } from '../services/activityService.js'
+import { loadActivities, updateActivity, deleteActivity } from '../services/activityService.js'
 import App from '../App.jsx'
 
 beforeEach(() => {
   globalThis.__activities = [mine, theirs]
+  loadActivities.mockReset()
+  loadActivities.mockImplementation(() => Promise.resolve(globalThis.__activities))
   updateActivity.mockReset()
   deleteActivity.mockReset()
 })

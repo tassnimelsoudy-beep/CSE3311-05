@@ -2,6 +2,7 @@
 // dashboard needs: each activity together with its members and rotation.
 import {
     getResourcesForUser,
+    getResourcesForGroup,
     createResource,
     addResourceMembers,
     updateResource,
@@ -10,12 +11,18 @@ import {
 import { getRotationParticipants, advanceIfDue, createRotation, updateRotation } from './rotationService.js'
 import { isRotation, sortActivities } from '../utils/activity.js'
 
-// Loads every activity the participant belongs to. Overdue turns are passed
-// on first (advanceIfDue), so the dashboard always shows whose turn it is now.
+// Loads the activities to show on the dashboard. Overdue turns are passed on
+// first (advanceIfDue), so it always shows whose turn it is now.
+// With a groupId, loads that group's activities. Without one, falls back to
+// every activity the participant belongs to, so someone who isn't in a group
+// yet still sees their own rather than an empty page.
 // Returns an array, or null if loading failed.
-async function loadActivities(participantId)
+async function loadActivities(participantId, groupId)
 {
-    const resources = await getResourcesForUser(participantId)
+    const resources = groupId
+        ? await getResourcesForGroup(groupId)
+        : await getResourcesForUser(participantId)
+
     if (!resources) {
         return null
     }
@@ -32,12 +39,12 @@ async function loadActivities(participantId)
 }
 
 // Creates a rotating activity: the resource, its members in turn order
-// (first id goes first), and the rotation schedule. createdBy is the
-// participants.id of the person adding it, who becomes its owner.
+// (first id goes first), and the rotation schedule. The activity belongs to
+// groupId, and createResource records the logged-in participant as its owner.
 // Returns the new resource, or null if any step failed.
-async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, createdBy })
+async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, groupId })
 {
-    const resource = await createResource(name, description || null, 'Rotation', createdBy ?? null)
+    const resource = await createResource(name, description || null, 'Rotation', groupId)
     if (!resource) {
         return null
     }
