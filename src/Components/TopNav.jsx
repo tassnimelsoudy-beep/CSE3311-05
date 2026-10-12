@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Home as HouseIcon, ChevronDown, Bell, LogOut } from 'lucide-react'
 import { logout } from '../services/authService.js'
+
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
@@ -41,9 +42,10 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
           ))}
         </select>
 
-        <button onClick={onCreateGroup}>
-          + Create Group
-        </button>
+      <button type="button" className="btn-ghost" onClick={onCreateGroup}>
+        <span aria-hidden="true">+</span>
+        Create Group
+      </button>
       </div>
 
       <div className="topnav-right">

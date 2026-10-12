@@ -207,34 +207,39 @@ export default function ({ groupId, onClose, onMembersChanged }) {
                 )}
               </ul>
 
-          {/* Other users */}
-          <h3 className="manage-members-heading">
-            Other Users ({filteredParticipants.length})
-          </h3>
+          
+            {/* Other users */}
+            <h3 className="manage-members-heading">
+                Other Users ({filteredParticipants.length})
+            </h3>
 
-          <ul className="manage-members-list">
-            {filteredParticipants.map(person => (
-          <li key={person.id} className="manage-member-row">
-            <div className="member-meta">
-              <strong>{person.name}</strong>
-              <span>Participant</span>
+            <div className="participant-list">
+                <ul className="manage-members-list">
+                    {filteredParticipants.map(person => (
+                    <li key={person.id} className="manage-member-row">
+                        <div className="member-meta">
+                        <strong>{person.name}</strong>
+                        <span>{person.email || 'Participant'}</span>
+                        </div>
+
+                        <button
+                        type="button"
+                        onClick={() => togglePendingAdd(person.id)}
+                        disabled={addingId !== null || removingId !== null}
+                        >
+                        {pendingAddIds.includes(person.id) ? 'Selected ✓' : 'Add'}
+                        </button>
+                    </li>
+                    ))}
+
+                    {filteredParticipants.length === 0 && (
+                    <li className="empty-state">
+                        No other users found.
+                    </li>
+                    )}
+                </ul>
             </div>
-
-            <button type="button" onClick={() => togglePendingAdd(person.id)} disabled={addingId !== null || removingId !== null}>
-              {pendingAddIds.includes(person.id)
-                ? 'Selected ✓'
-                : 'Add'}
-            </button>
-          </li>
-        ))}
-
-        {filteredParticipants.length === 0 && (
-        <li className="empty-state">
-            No other users found.
-        </li>
-        )}
-        </ul>
-
+            
         {/* Confirm selected additions */}
         {pendingAddIds.length > 0 && (
         <button 
@@ -256,6 +261,6 @@ export default function ({ groupId, onClose, onMembersChanged }) {
         </button>
         </div>
         </section>
-        </div>
+    </div>
   )
 }
