@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { useState } from 'react'
 import Avatar from './Avatar.jsx'
+import Modal from './Modal.jsx'
 
 // Repeat units offered in the form (must match rotationService.nextRotationDate).
 const UNITS = [
@@ -28,15 +28,6 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
   const [selectedIds, setSelectedIds] = useState(meId ? [meId] : []) // array keeps turn order
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // Close with the Escape key.
-  useEffect(() => {
-    function handleKey(event) {
-      if (event.key === 'Escape') handleClose()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  })
 
   function toggleSelect(id) {
     setSelectedIds(ids => (ids.includes(id) ? ids.filter(other => other !== id) : [...ids, id]))
@@ -89,118 +80,109 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && handleClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
-        <div className="modal-header">
-          <h2 id="add-title">Add activity</h2>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={handleClose}>
-            <X size={18} aria-hidden="true" />
-          </button>
+    <Modal title="Add activity" onClose={handleClose} locked={loading}>
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="field">
+          <label htmlFor="activity-name">Name</label>
+          <input
+            id="activity-name"
+            autoFocus
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Vacuum the living room"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="field">
-            <label htmlFor="activity-name">Name</label>
-            <input
-              id="activity-name"
-              autoFocus
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Vacuum the living room"
-            />
-          </div>
+        <div className="field">
+          <label htmlFor="activity-description">Details (optional)</label>
+          <input
+            id="activity-description"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Vacuum is in the hall closet"
+          />
+        </div>
 
-          <div className="field">
-            <label htmlFor="activity-description">Details (optional)</label>
-            <input
-              id="activity-description"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Vacuum is in the hall closet"
-            />
+        <div className="field">
+          <span className="field-label">How it’s shared</span>
+          <div className="choice-row">
+          {[
+            { value: 'Rotation', label: 'Take turns' },
+            { value: 'Reservation', label: 'Reserve it' },
+          ].map(option => (
+            <button
+              key={option.value}
+              type="button"
+              className={`choice${sharingMethod === option.value ? ' selected' : ''}`}
+              aria-pressed={sharingMethod === option.value}
+              onClick={() => setSharingMethod(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
           </div>
+        </div>
 
+        {sharingMethod === 'Rotation' && (
+          <>
           <div className="field">
-            <span className="field-label">How it’s shared</span>
-            <div className="choice-row">
-            {[
-              { value: 'Rotation', label: 'Take turns' },
-              { value: 'Reservation', label: 'Reserve it' },
-            ].map(option => (
-              <button
-                key={option.value}
-                type="button"
-                className={`choice${sharingMethod === option.value ? ' selected' : ''}`}
-                aria-pressed={sharingMethod === option.value}
-                onClick={() => setSharingMethod(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
+            <label htmlFor="activity-every">Repeats every</label>
+            <div className="repeat-row">
+              <input
+                id="activity-every"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={frequencyValue}
+                onChange={e => setFrequencyValue(e.target.value)}
+              />
+              <select aria-label="Repeat unit" value={frequencyUnit} onChange={e => setFrequencyUnit(e.target.value)}>
+                {UNITS.map(unit => (
+                  <option key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {sharingMethod === 'Rotation' && (
-            <>
-            <div className="field">
-              <label htmlFor="activity-every">Repeats every</label>
-              <div className="repeat-row">
-                <input
-                  id="activity-every"
-                  type="number"
-                  min="1"
-                  inputMode="numeric"
-                  value={frequencyValue}
-                  onChange={e => setFrequencyValue(e.target.value)}
-                />
-                <select aria-label="Repeat unit" value={frequencyUnit} onChange={e => setFrequencyUnit(e.target.value)}>
-                  {UNITS.map(unit => (
-                    <option key={unit.value} value={unit.value}>
-                      {unit.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <fieldset className="field member-picker">
-              <legend className="field-label">Who takes turns</legend>
-              {household && household.length > 0 ? (
-                household.map(p => (
-                  <label key={p.id} className="member-option">
-                    <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
-                    <Avatar name={p.name} size={28} />
-                    <span>{p.isYou ? `${p.name} (you)` : p.name}</span>
-                  </label>
-                ))
-              ) : (
-                <div className="hint">No participants available</div>
-              )}
-              <p className="hint">
-                {selectedIds.length > 0
-                  ? `Turn order: ${selectedIds.map(labelFor).join(', then ')}.`
-                  : 'People take turns in the order you tick them.'}
-              </p>
-            </fieldset>
-            </>
-          )}
-
-          {error && (
-            <p className="auth-error" role="alert">
-              {error}
+          <fieldset className="field member-picker">
+            <legend className="field-label">Who takes turns</legend>
+            {household && household.length > 0 ? (
+              household.map(p => (
+                <label key={p.id} className="member-option">
+                  <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
+                  <Avatar name={p.name} size={28} />
+                  <span>{p.isYou ? `${p.name} (you)` : p.name}</span>
+                </label>
+              ))
+            ) : (
+              <div className="hint">No participants available</div>
+            )}
+            <p className="hint">
+              {selectedIds.length > 0
+                ? `Turn order: ${selectedIds.map(labelFor).join(', then ')}.`
+                : 'People take turns in the order you tick them.'}
             </p>
-          )}
+          </fieldset>
+          </>
+        )}
 
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={handleClose} disabled={loading}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary btn-inline" disabled={loading}>
-              {loading ? 'Adding…' : 'Add activity'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={handleClose} disabled={loading} data-secondary>
+            Cancel
+          </button>
+          <button type="submit" className="btn-primary btn-inline" disabled={loading}>
+            {loading ? 'Adding…' : 'Add activity'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

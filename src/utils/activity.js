@@ -45,6 +45,31 @@ function formatDue(isoDate, now = new Date())
     return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// Who is allowed to edit or delete an activity.
+// Only its creator (resources.created_by) may. An activity with no creator
+// recorded is left open to everyone, so rows created before ownership existed
+// don't become permanently stuck.
+function canManage(activity, participantId)
+{
+    const owner = activity?.created_by
+    return owner == null || owner === participantId
+}
+
+// The name of whoever created the activity, for "only X can edit this".
+// Falls back to a generic phrase when the creator isn't among its members.
+function getOwnerName(activity, participantId)
+{
+    const owner = activity?.created_by
+    if (owner == null) {
+        return null
+    }
+    if (owner === participantId) {
+        return 'You'
+    }
+    const person = (activity.members || []).find(member => member.id === owner)
+    return person ? person.name : 'another member'
+}
+
 // Reorders the turn list so the current person comes first, keeping the
 // same cycle: [Alex, Sam, Jordan] with Sam current -> [Sam, Jordan, Alex].
 function turnOrderFromCurrent(members, currentId)
@@ -108,6 +133,8 @@ function sortActivities(activities)
 
 export {
     isRotation,
+    canManage,
+    getOwnerName,
     formatFrequency,
     formatDue,
     turnOrderFromCurrent,

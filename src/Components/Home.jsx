@@ -6,12 +6,14 @@ import { loadActivities, createRotatingActivity, createReservationActivity } fro
 import { createReservation } from '../services/reservationService.js'
 import { getDisplayName } from '../utils/avatar.js'
 import { getNextUp } from '../utils/activity.js'
+import { useActivityEditing } from '../hooks/useActivityEditing.js'
 import TopNav from './TopNav.jsx'
 import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
 import RemindersPanel from './RemindersPanel.jsx'
 import MembersPanel from './MembersPanel.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
+import ActivityDialogs from './ActivityDialogs.jsx'
 import ReservationModal from './ReservationModal.jsx'
 import AddGroupModal from "./AddGroupModal"
 import ManageGroupMembersModal from './ManageGroupMembersModal.jsx'
@@ -62,7 +64,6 @@ export default function Home({ user }) {
       const initialGroup = availableGroups[0] || null
       setSelectedGroup(initialGroup)
 
-      //const list = await loadActivitiesWithDemo(me)
       
     // Load activities for the selected group
       // if (initialGroup) {
@@ -132,6 +133,7 @@ export default function Home({ user }) {
   const hideToast = useCallback(() => setToast(null), [])
   const comingSoon = useCallback(feature => showToast(`${feature} will be available in a later version.`), [showToast])
   const closeModal = useCallback(() => setAdding(false), [])
+  const editor = useActivityEditing({ setActivities, showToast })
 
   const name = getDisplayName(participant, user)
   const firstName = name.split(' ')[0]
@@ -243,8 +245,8 @@ export default function Home({ user }) {
               busyId={busyId}
               reservationBusyId={reservationBusyId}
               onMarkDone={handleMarkDone}
+              onEdit={editor.start}
               onReserve={setReserving}
-              onComingSoon={comingSoon}
             />
             <NextUpBar
               nextUp={getNextUp(activities || [])}
@@ -272,6 +274,7 @@ export default function Home({ user }) {
       {adding && (        
         <AddResourceModal household={groupMembers} meId={meId} groupId={selectedGroup?.id} onClose={closeModal} onCreate={handleCreate} />
       )}
+      <ActivityDialogs editor={editor} />
 
       {reserving && (
         <ReservationModal
