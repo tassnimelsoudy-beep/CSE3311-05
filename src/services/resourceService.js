@@ -131,6 +131,10 @@ async function updateResource(resourceId, updates)
 }
 
 // Permanently deletes a resource by its id.
+// Returns the deleted rows (an empty array if it was already gone), or null if
+// the delete failed. Without .select() Supabase sends no body back, and the
+// result would be null on success too, leaving callers unable to tell the
+// difference.
 async function deleteResource(resourceId)
 {
     try {
@@ -138,6 +142,7 @@ async function deleteResource(resourceId)
             .from("resources")
             .delete()
             .eq("id", resourceId)
+            .select()
             
             if (error) {
                 throw error
@@ -201,7 +206,8 @@ async function getResourcesForGroup(groupId)
     }
 }
 
-// Adds a participant to a resource with a role (e.g. "owner" or "member") role can null.
+// Adds a participant to a resource. The "role" column was removed from
+// resource_members; ownership lives in resources.created_by instead.
 // position (position > 0 or null) is optional and can be used to order participants in a resource.
 // Creates the link row in resource_members.
 async function addResourceMember(resourceId, userId, userPosition)
