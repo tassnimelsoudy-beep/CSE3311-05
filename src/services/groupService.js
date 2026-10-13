@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 
+// Creates a new group and adds the creator as its first member.
+// Returns the new group object, or null if either insert fails.
 async function createGroup(groupName, groupCreator)
 {
     try {
@@ -40,6 +42,8 @@ async function createGroup(groupName, groupCreator)
     }
 }
 
+// Gets every group a participant belongs to, newest first.
+// Looks up group_members and returns the linked group details.
 async function getGroupsForUser(groupMember)
 {
      console.log("Loading groups for participant:", groupMember)
@@ -71,6 +75,7 @@ async function getGroupsForUser(groupMember)
     }
 }
 
+// Adds a participant to a group as a member.
 async function addGroupMember(participantId, groupId)
 {
     try {
@@ -96,6 +101,8 @@ async function addGroupMember(participantId, groupId)
     }
 }
 
+// Removes a participant from a group via a database function (handles any
+// related cleanup, e.g. resource memberships, on the database side).
 async function removeGroupMember(memberId, groupId) {
     try {
         const { data, error } = await supabase.rpc(
@@ -116,6 +123,7 @@ async function removeGroupMember(memberId, groupId) {
     }
 }
 
+// Gets every member of a group, along with the group's own name and creator.
 async function getGroupMembers(groupId)
 {
     try {
