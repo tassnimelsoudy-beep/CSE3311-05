@@ -153,10 +153,33 @@ async function getGroupMembers(groupId)
     }
 }
 
+async function deleteGroup(groupId)
+{
+    try {
+        const {data, error} = await supabase
+            .from("groups")
+            .delete()
+            .eq("id", groupId)
+            .select()
+            
+            if (error) {
+                throw error
+            }
+
+            console.log("successfully deleted group: ", data)
+            return data
+    } catch (error)
+    {
+        console.error("Error deleting group: ", error.message)
+        return null
+    }
+}
+
 export {
     createGroup,
     getGroupsForUser,
     addGroupMember,
     getGroupMembers,
-    removeGroupMember
+    removeGroupMember,
+    deleteGroup
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Search, UserPlus, Check } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { getAllParticipants } from '../services/participantService.js'
 
 import { getGroupMembers, addGroupMember, removeGroupMember} from '../services/groupService.js'
@@ -239,7 +239,7 @@ export default function ({ groupId, onClose, onMembersChanged }) {
                     )}
                 </ul>
             </div>
-            
+
         {/* Confirm selected additions */}
         {pendingAddIds.length > 0 && (
         <button 
@@ -256,9 +256,9 @@ export default function ({ groupId, onClose, onMembersChanged }) {
         )}
 
         <div className="modal-actions">
-        <button type="button" onClick={onClose}>
-        Done
-        </button>
+            <button type="button" onClick={onClose}>
+                Done
+            </button>
         </div>
         </section>
     </div>
