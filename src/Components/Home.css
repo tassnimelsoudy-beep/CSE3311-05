@@ -414,6 +414,21 @@
   font-weight: 500;
 }
 
+/* A reservation item that is booked right now */
+.in-use {
+  color: #8a5d05;
+  font-weight: 500;
+}
+
+.tag-now {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--turn);
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .badge {
   display: inline-block;
   padding: 3px 10px;
@@ -510,6 +525,18 @@
 .reservation-list li {
   display: grid;
   gap: 2px;
+}
+
+.reservation-list li strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The booking under way reads a shade stronger than the ones still to come */
+.reservation-now span {
+  color: var(--ink) !important;
+  font-weight: 500;
 }
 
 .reservation-list li span {
