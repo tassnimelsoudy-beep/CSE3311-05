@@ -298,3 +298,124 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== ROTATE NOTIFICATIONS ===== */
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-wrapper .icon-btn {
+  position: relative;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  background: #2b9277;
+  border: 2px solid white;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: -35px;
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  max-height: 420px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e5ece9;
+  border-radius: 16px;
+  box-shadow: 0 12px 35px rgba(20, 50, 43, 0.13);
+  padding: 18px;
+  z-index: 1000;
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.notifications-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #183e35;
+}
+
+.notifications-header button {
+  background: none;
+  border: none;
+  color: #23846e;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.notifications-header button:hover {
+  text-decoration: underline;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.notification-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 11px;
+  border: 1px solid #e7eeeb;
+  background: #ffffff;
+  color: #29433c;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease;
+  white-space: normal;
+}
+
+.notification-item:hover {
+  background: #f2f8f5;
+}
+
+.notification-item.unread {
+  background: #eef8f3;
+  border-color: #cce9dc;
+}
+
+.notification-item.read {
+  background: #fafcfb;
+}
+
+.notification-item strong {
+  font-size: 14px;
+  font-weight: 650;
+  color: #193f35;
+}
+
+.notification-item span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5c7069;
+}
+
+.notification-item small {
+  font-size: 11px;
+  color: #879790;
+}

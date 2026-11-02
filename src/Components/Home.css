@@ -782,3 +782,36 @@
     width: 100%;
   }
 }
+/* Notification dropdown */
+
+.notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  padding: 20px;
+  background: white;
+  border: 1px solid #e2e8e5;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+}
+
+.notifications-panel h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  color: #183b34;
+}
+
+.notifications-panel p {
+  margin: 0;
+  font-size: 14px;
+  color: #64746f;
+}
