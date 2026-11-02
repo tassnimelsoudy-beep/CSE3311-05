@@ -1,3 +1,4 @@
+// @flow
 import { supabase } from '../lib/supabase.js'
 
 // Turns Supabase's error messages into plain sentences for the auth screen.

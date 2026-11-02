@@ -58,7 +58,9 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
               <ul className="reservation-list" aria-label={`Reservations for ${activity.name}`}>
                 {activity.reservations.map(reservation => (
                   <li key={reservation.id}>
-                    <strong>{reservation.participants?.name || 'Group member'}</strong>
+                    <strong>
+                      {reservation.participants?.name || `Group member (${reservation.participant_id})`}
+                    </strong>
                     <span>
                       {new Date(reservation.starts_at).toLocaleString()} – {new Date(reservation.ends_at).toLocaleString()}
                     </span>

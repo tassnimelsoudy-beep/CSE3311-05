@@ -3,7 +3,7 @@ import { getCurrentParticipant } from '../services/participantService.js'
 import { advanceTurn } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
 import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
-import { createReservation } from '../services/reservationService.js'
+import { createReservation, subscribeToReservationChanges } from '../services/reservationService.js'
 import { getDisplayName } from '../utils/avatar.js'
 import { getNextUp } from '../utils/activity.js'
 import { useActivityEditing } from '../hooks/useActivityEditing.js'
@@ -102,6 +102,47 @@ export default function Home({ user }) {
 
     return () => {
       active = false
+    }
+  }, [participant, selectedGroup])
+
+  useEffect(() => {
+    if (!participant || !selectedGroup) return
+
+    let active = true
+    let refreshing = false
+    async function refreshActivities() {
+      if (refreshing) return
+      refreshing = true
+      try {
+        const list = await loadActivities(participant.id, selectedGroup.id)
+        if (active && list) {
+          setActivities(list)
+        }
+      } finally {
+        refreshing = false
+      }
+    }
+
+    const unsubscribe = subscribeToReservationChanges(refreshActivities)
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshActivities()
+      }
+    }, 10_000)
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') {
+        refreshActivities()
+      }
+    }
+    window.addEventListener('focus', refreshActivities)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refreshActivities)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      unsubscribe()
     }
   }, [participant, selectedGroup])
 
