@@ -174,6 +174,140 @@ async function deleteGroup(groupId)
         return null
     }
 }
+// Sends a group invite to a participant instead of adding them directly.
+// Returns the invite, or null if they're already a member, already invited, or the insert fails.
+async function sendGroupInvite(groupId, invitedParticipantId, invitedBy)
+{
+    try {
+        // skip if they're already in the group
+        const { data: existing, error: existingError } = await supabase
+            .from("group_members")
+            .select("participant_id")
+            .eq("group_id", groupId)
+            .eq("participant_id", invitedParticipantId)
+            .maybeSingle()
+
+        if (existingError) {
+            throw existingError
+        }
+
+        if (existing) {
+            console.error("Participant is already in this group")
+            return null
+        }
+
+        const { data, error } = await supabase
+            .from("group_invites")
+            .insert({
+                group_id: groupId,
+                invited_participant_id: invitedParticipantId,
+                invited_by: invitedBy
+            })
+            .select()
+            .single()
+
+        if (error) {
+            throw error
+        }
+
+        console.log("successfully sent invite: ", data)
+        return data
+    } catch (error)
+    {
+        console.error("Error sending invite: ", error.message)
+        return null
+    }
+}
+
+// Gets all pending invites for a participant, with the group's name and who sent it.
+async function getPendingInvites(participantId)
+{
+    try {
+        const { data, error } = await supabase
+            .from("group_invites")
+            .select("id, created_at, groups(id, name), invited_by_participant:participants!group_invites_invited_by_fkey(id, name)")
+            .eq("invited_participant_id", participantId)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    } catch (error)
+    {
+        console.error("Error retrieving invites: ", error.message)
+        return null
+    }
+}
+
+// Accepts a pending invite: adds the person to the group, then marks the invite accepted.
+// Returns the updated invite, or null on failure.
+async function acceptGroupInvite(inviteId)
+{
+    try {
+        const { data: invite, error: inviteError } = await supabase
+            .from("group_invites")
+            .select("*")
+            .eq("id", inviteId)
+            .eq("status", "pending")
+            .single()
+
+        if (inviteError) {
+            throw inviteError
+        }
+
+        const member = await addGroupMember(invite.invited_participant_id, invite.group_id)
+
+        if (!member) {
+            throw new Error("Could not add participant to group")
+        }
+
+        const { data, error } = await supabase
+            .from("group_invites")
+            .update({ status: "accepted" })
+            .eq("id", inviteId)
+            .select()
+            .single()
+
+        if (error) {
+            throw error
+        }
+
+        console.log("successfully accepted invite: ", data)
+        return data
+    } catch (error)
+    {
+        console.error("Error accepting invite: ", error.message)
+        return null
+    }
+}
+
+// Declines a pending invite. Nobody is added to the group.
+async function declineGroupInvite(inviteId)
+{
+    try {
+        const { data, error } = await supabase
+            .from("group_invites")
+            .update({ status: "declined" })
+            .eq("id", inviteId)
+            .eq("status", "pending")
+            .select()
+            .single()
+
+        if (error) {
+            throw error
+        }
+
+        console.log("successfully declined invite: ", data)
+        return data
+    } catch (error)
+    {
+        console.error("Error declining invite: ", error.message)
+        return null
+    }
+}
 
 export {
     createGroup,
@@ -181,5 +315,9 @@ export {
     addGroupMember,
     getGroupMembers,
     removeGroupMember,
-    deleteGroup
+    deleteGroup,
+    declineGroupInvite,
+    acceptGroupInvite,
+    getPendingInvites,
+    sendGroupInvite
 }
