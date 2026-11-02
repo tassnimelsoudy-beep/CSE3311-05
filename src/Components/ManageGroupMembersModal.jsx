@@ -202,8 +202,8 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
             >
                 <div className="modal-header">
                     <div>
-                        <h2 id="manage-members-title">Manage Members</h2>
-                        <p>Invite people to your group.</p>
+                        <h2 id="manage-members-title">Manage group</h2>
+                        <p>Invite roommates, hand over ownership, or delete the group.</p>
                     </div>
 
                     <button

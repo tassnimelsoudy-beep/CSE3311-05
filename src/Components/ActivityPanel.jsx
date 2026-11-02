@@ -1,5 +1,15 @@
 import { Search, Check, Calendar, Settings, Lock, ClipboardList, KeyRound } from 'lucide-react'
-import { isRotation, formatFrequency, formatDue, canManage, getOwnerName } from '../utils/activity.js'
+import {
+  isRotation,
+  formatFrequency,
+  formatDue,
+  formatClock,
+  formatReservationWindow,
+  isReservationActive,
+  getActiveReservation,
+  canManage,
+  getOwnerName,
+} from '../utils/activity.js'
 import TurnOrder from './TurnOrder.jsx'
 
 function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onReserve, onEdit }) {
@@ -7,6 +17,8 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
   const rotation = activity.rotation
   const isMyTurn = rotating && rotation?.current_participant_id === meId
   const due = formatDue(rotation?.next_rotation_at)
+  // A reservation item is only free when nothing is booked right now.
+  const inUse = rotating ? null : getActiveReservation(activity)
   // Only the person who added an activity can change or remove it.
   const mine = canManage(activity, meId)
   const owner = getOwnerName(activity, meId)
@@ -38,7 +50,11 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
               {isMyTurn && <span className="tag-turn">Your turn</span>}
             </>
           ) : (
-            <span className="available">Available now</span>
+            inUse ? (
+              <span className="in-use">In use until {formatClock(new Date(inUse.ends_at))}</span>
+            ) : (
+              <span className="available">Available now</span>
+            )
           )}
         </span>
       </div>
@@ -56,14 +72,18 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
           <div className="reservation-column">
             {(activity.reservations || []).length > 0 ? (
               <ul className="reservation-list" aria-label={`Reservations for ${activity.name}`}>
-                {activity.reservations.map(reservation => (
-                  <li key={reservation.id}>
-                    <strong>{reservation.participants?.name || 'Group member'}</strong>
-                    <span>
-                      {new Date(reservation.starts_at).toLocaleString()} – {new Date(reservation.ends_at).toLocaleString()}
-                    </span>
-                  </li>
-                ))}
+                {activity.reservations.map(reservation => {
+                  const active = isReservationActive(reservation)
+                  return (
+                    <li key={reservation.id} className={active ? 'reservation-now' : undefined}>
+                      <strong>
+                        {reservation.participants?.name || 'Group member'}
+                        {active && <span className="tag-now">Now</span>}
+                      </strong>
+                      <span>{formatReservationWindow(reservation.starts_at, reservation.ends_at)}</span>
+                    </li>
+                  )
+                })}
               </ul>
             ) : (
               <span className="available">No upcoming reservations</span>

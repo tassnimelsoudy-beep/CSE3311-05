@@ -18,18 +18,21 @@ vi.mock('../services/groupService.js', () => ({
       { id: 2, name: 'Alex Chen' },
     ])
   ),
+  getPendingInvites: vi.fn(() => Promise.resolve([])),
+  acceptGroupInvite: vi.fn(),
+  declineGroupInvite: vi.fn(),
 }))
 vi.mock('../services/reservationService.js', () => ({ createReservation: vi.fn() }))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
 }))
-vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
+vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(),
   createRotatingActivity: vi.fn(),
   createReservationActivity: vi.fn(),
 }))
-vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
+vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(() =>
     Promise.resolve([
@@ -59,7 +62,7 @@ vi.mock('../services/activityService.js', () => ({
 }))
 
 import { signUp, onAuthChange } from '../services/authService.js'
-import { advanceTurn } from '../services/rotationService.js'
+import { completeTurn } from '../services/rotationService.js'
 import AuthScreen from '../Components/AuthScreen.jsx'
 import App from '../App.jsx'
 
@@ -120,7 +123,7 @@ describe('Home dashboard', () => {
 
   it('passes the turn to the next person when marked done', async () => {
     logInAsSarah()
-    advanceTurn.mockResolvedValue({
+    completeTurn.mockResolvedValue({
       id: 70,
       current_participant_id: 2,
       frequency_value: 1,
@@ -132,7 +135,7 @@ describe('Home dashboard', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Mark Take out the trash done' }))
 
-    expect(advanceTurn).toHaveBeenCalledWith(7)
+    expect(completeTurn).toHaveBeenCalledWith(7, 1)
     expect(await screen.findByText('Marked Take out the trash done. Alex is up next.')).toBeInTheDocument()
     expect(screen.queryByText('Your turn')).not.toBeInTheDocument()
   })
