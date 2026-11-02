@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Home as HouseIcon, ChevronDown, Bell, LogOut } from 'lucide-react'
 import { logout } from '../services/authService.js'
 import {
@@ -16,7 +16,10 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [loadingNotifications, setLoadingNotifications] = useState(true)
+
   const { invites, busyId, accept, decline, reload } = useInvites(participantId, onGroupsChanged)
+
+
 
   useEffect(() => {
     let active = true
@@ -46,6 +49,30 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
       clearInterval(interval)
     }
   }, [])
+
+  const wrapperRef = useRef(null)
+
+  useEffect(() => {
+    if (!showNotifications) return
+
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowNotifications(false)
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') setShowNotifications(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showNotifications])
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -88,7 +115,7 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
       </div>
 
       <div className="topnav-right">
-        <div className="notification-wrapper">
+        <div className="notification-wrapper" ref={wrapperRef}>
           <button
             type="button"
             className="icon-btn"
