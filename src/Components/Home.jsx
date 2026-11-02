@@ -12,6 +12,7 @@ import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
 import RemindersPanel from './RemindersPanel.jsx'
 import MembersPanel from './MembersPanel.jsx'
+import NoGroupPrompt from './NoGroupPrompt.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
 import ActivityDialogs from './ActivityDialogs.jsx'
 import ReservationModal from './ReservationModal.jsx'
@@ -33,6 +34,8 @@ export default function Home({ user }) {
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [showManageMembers, setShowManageMembers] = useState(false)
   const [groupMembers, setGroupMembers] = useState([])
+  const [groupsLoaded, setGroupsLoaded] = useState(false)
+  const [groupPromptHidden, setGroupPromptHidden] = useState(false)
   const [showReminders, setShowReminders] = useState(false)
   const [toast, setToast] = useState(null)
 
@@ -48,6 +51,7 @@ export default function Home({ user }) {
       if (!me) {
         setGroups([])
         setSelectedGroup(null)
+        setGroupsLoaded(true)
         setToast({
           id: Date.now(),
           message: "Couldn’t load your participant profile. Please ask your project administrator to check participant setup.",
@@ -63,6 +67,7 @@ export default function Home({ user }) {
 
       const initialGroup = availableGroups[0] || null
       setSelectedGroup(initialGroup)
+      setGroupsLoaded(true)
 
       
     // Load activities for the selected group
@@ -128,6 +133,10 @@ export default function Home({ user }) {
       active = false
     }
   }, [selectedGroup, participant])
+
+  // Only nudge once we know the answer, and stop as soon as they're in a group
+  // or have waved it off.
+  const showGroupPrompt = groupsLoaded && groups.length === 0 && !groupPromptHidden
 
   const showToast = useCallback(message => setToast({ id: Date.now(), message }), [])
   const hideToast = useCallback(() => setToast(null), [])
@@ -261,6 +270,12 @@ async function handleMarkDone(activity) {
 
         <div className="home-grid">
           <div className="home-content">
+            {showGroupPrompt && (
+              <NoGroupPrompt
+                onCreateGroup={() => setShowAddGroupModal(true)}
+                onDismiss={() => setGroupPromptHidden(true)}
+              />
+            )}
             <ActivityPanel
               activities={activities}
               meId={meId}

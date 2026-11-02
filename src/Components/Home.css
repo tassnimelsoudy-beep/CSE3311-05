@@ -994,3 +994,100 @@
   font-size: 14px;
   color: #64746f;
 }
+
+/* ---- No-group nudge (dashboard, shown only when you belong to no group) ---- */
+.no-group-prompt {
+  position: relative;
+  padding: 24px 26px;
+  background: linear-gradient(180deg, var(--brand-tint) 0%, var(--surface) 70%);
+}
+
+.no-group-prompt h2 {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  margin: 0 0 6px;
+}
+
+.no-group-prompt > p {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--ink-soft);
+}
+
+.no-group-dismiss {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.no-group-dismiss:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.no-group-paths {
+  list-style: none;
+  margin: 18px 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.no-group-paths li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.no-group-paths svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--brand);
+}
+
+.no-group-paths div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.no-group-paths strong {
+  font-size: 0.95rem;
+}
+
+.no-group-paths span {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.no-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* .btn-primary is full-width app-wide; inside this card it sits beside the
+   dismiss button instead. */
+.no-group-actions .btn-primary {
+  width: auto;
+}
+
+.no-group-prompt .hint {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
