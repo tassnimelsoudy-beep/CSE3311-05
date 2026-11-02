@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 vi.mock('../services/authService.js', () => ({
   login: vi.fn(),
   signUp: vi.fn(),
+  updateAccount: vi.fn(),
   logout: vi.fn(),
   onAuthChange: vi.fn(),
 }))
@@ -19,9 +20,13 @@ vi.mock('../services/groupService.js', () => ({
     ])
   ),
 }))
-vi.mock('../services/reservationService.js', () => ({ createReservation: vi.fn() }))
+vi.mock('../services/reservationService.js', () => ({
+  createReservation: vi.fn(),
+  subscribeToReservationChanges: vi.fn(() => () => {}),
+}))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
+  updateCurrentParticipantName: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
@@ -58,7 +63,8 @@ vi.mock('../services/activityService.js', () => ({
   deleteActivity: vi.fn(),
 }))
 
-import { signUp, onAuthChange } from '../services/authService.js'
+import { signUp, onAuthChange, updateAccount } from '../services/authService.js'
+import { updateCurrentParticipantName } from '../services/participantService.js'
 import { advanceTurn } from '../services/rotationService.js'
 import AuthScreen from '../Components/AuthScreen.jsx'
 import App from '../App.jsx'
@@ -108,6 +114,43 @@ function logInAsSarah() {
 }
 
 describe('Home dashboard', () => {
+  it('lets a user update their name and syncs it to the group participant', async () => {
+    logInAsSarah()
+    updateAccount.mockResolvedValue({
+      data: {
+        user: {
+          id: 'u1',
+          email: 'sarah@example.com',
+          user_metadata: { name: 'Taylor Swift' },
+        },
+      },
+      error: null,
+    })
+    updateCurrentParticipantName.mockResolvedValue({
+      id: 1,
+      name: 'Taylor Swift',
+      user_id: 'u1',
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Edit profile' }))
+    await user.clear(screen.getByLabelText('Display name'))
+    await user.type(screen.getByLabelText('Display name'), 'Taylor Swift')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByRole('heading', { name: 'Hi, Taylor' })).toBeInTheDocument()
+    expect(updateAccount).toHaveBeenCalledWith({
+      name: 'Taylor Swift',
+      email: '',
+      password: '',
+      currentPassword: '',
+      userId: 'u1',
+    })
+    expect(updateCurrentParticipantName).toHaveBeenCalledWith(1, 'u1', 'Taylor Swift')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it("lists the household's activities and flags the user's own turn", async () => {
     logInAsSarah()
     render(<App />)

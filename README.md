@@ -24,6 +24,7 @@ Tests live in `src/tests/` and never contact the real database; Supabase is repl
 | `dataServices.test.js` | Rejecting blank names; saving resources; members saved in turn order; reading a resource's members |
 | `activityHelpers.test.js` | Dashboard labels ("Weekly", "Due Friday"), turn order display, who is in the household, what's up next |
 | `authService.test.js` | Sign-up sends the user's name; readable login/sign-up errors |
+| `profileModal.test.jsx` | Editing account details and handling save/confirmation feedback |
 | `avatar.test.js` | Initials and which name is displayed |
 | `screens.test.jsx` | Sign-up form requires a name; login screen vs. home page; dashboard shows your turn; marking done passes the turn |
 

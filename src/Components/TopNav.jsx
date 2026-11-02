@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Home as HouseIcon, ChevronDown, Bell, LogOut } from 'lucide-react'
+import { Bell, LogOut, UserRound } from 'lucide-react'
 import { logout } from '../services/authService.js'
 
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
-export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup }) {
+export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup, onEditProfile }) {
   const [loggingOut, setLoggingOut] = useState(false)
 
   async function handleLogout() {
@@ -57,10 +57,11 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
         >
           <Bell size={18} aria-hidden="true" />
         </button>
-        <div className="profile">
+        <button type="button" className="profile profile-button" onClick={onEditProfile} aria-label="Edit profile">
           <Avatar name={name} size={32} />
           <span className="profile-name">{name}</span>
-        </div>
+          <UserRound size={15} aria-hidden="true" />
+        </button>
         <button
           type="button"
           className="btn-ghost"

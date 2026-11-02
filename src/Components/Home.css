@@ -64,6 +64,24 @@
   min-width: 0;
 }
 
+.profile-button {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.profile-button:hover {
+  background: var(--bg);
+}
+
+.profile-button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 .profile-name {
   font-weight: 600;
   white-space: nowrap;
@@ -556,6 +574,15 @@
 
 .modal-header h2 {
   font-size: 1.5rem;
+}
+
+.form-success {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-size: 0.92rem;
 }
 
 .field-label {

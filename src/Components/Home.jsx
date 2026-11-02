@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getCurrentParticipant } from '../services/participantService.js'
+import { getCurrentParticipant, updateCurrentParticipantName } from '../services/participantService.js'
+import { updateAccount } from '../services/authService.js'
 import { advanceTurn } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
 import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
@@ -18,6 +19,7 @@ import ReservationModal from './ReservationModal.jsx'
 import AddGroupModal from "./AddGroupModal"
 import ManageGroupMembersModal from './ManageGroupMembersModal.jsx'
 import Toast from './Toast.jsx'
+import ProfileModal from './ProfileModal.jsx'
 import './Home.css'
 
 export default function Home({ user }) {
@@ -34,6 +36,8 @@ export default function Home({ user }) {
   const [showManageMembers, setShowManageMembers] = useState(false)
   const [groupMembers, setGroupMembers] = useState([])
   const [showReminders, setShowReminders] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const [accountUser, setAccountUser] = useState(user)
   const [toast, setToast] = useState(null)
 
 
@@ -180,6 +184,79 @@ export default function Home({ user }) {
   const firstName = name.split(' ')[0]
   const meId = participant?.id
 
+  async function handleProfileSave({ name: nextName, email, password, currentPassword }) {
+    const changedName = nextName !== participant?.name
+    function applyParticipantName(updatedParticipant) {
+      setParticipant(updatedParticipant)
+      setGroupMembers(members => members.map(member =>
+        member.id === updatedParticipant.id ? { ...member, name: updatedParticipant.name } : member
+      ))
+      setActivities(list => (list || []).map(activity => ({
+        ...activity,
+        members: (activity.members || []).map(member =>
+          member.id === updatedParticipant.id ? { ...member, name: updatedParticipant.name } : member
+        ),
+        reservations: (activity.reservations || []).map(reservation =>
+          reservation.participant_id === updatedParticipant.id
+            ? { ...reservation, participants: { ...reservation.participants, name: updatedParticipant.name } }
+            : reservation
+        ),
+      })))
+    }
+
+    let updatedParticipant = participant
+    if (changedName) {
+      updatedParticipant = await updateCurrentParticipantName(participant.id, user.id, nextName)
+      if (!updatedParticipant) {
+        return {
+          error: 'Your group display name could not be saved, so no account settings were changed. Please try again or contact your administrator.',
+        }
+      }
+    }
+
+    const accountResult = await updateAccount({
+      name: changedName ? nextName : '',
+      email,
+      password,
+      currentPassword,
+      userId: user.id,
+    })
+    if (accountResult.error) {
+      if (changedName) {
+        const reverted = await updateCurrentParticipantName(participant.id, user.id, participant.name)
+        if (!reverted) {
+          applyParticipantName(updatedParticipant)
+          return {
+            error: `${accountResult.error} Your group display name was saved but could not be rolled back; please contact your administrator.`,
+          }
+        }
+      }
+      return { error: accountResult.error }
+    }
+
+    if (changedName) {
+      applyParticipantName(updatedParticipant)
+    }
+    if (accountResult.data?.user) {
+      setAccountUser(current => ({
+        ...current,
+        ...accountResult.data.user,
+        user_metadata: {
+          ...current.user_metadata,
+          ...accountResult.data.user.user_metadata,
+        },
+      }))
+    }
+    if (email) {
+      return {
+        message: 'Profile saved. Check your email to confirm the new address before it takes effect.',
+      }
+    }
+    showToast('Profile updated.')
+    setShowProfile(false)
+    return {}
+  }
+
   async function handleMarkDone(activity) {
     setBusyId(activity.id)
     const updated = await advanceTurn(activity.id)
@@ -269,7 +346,7 @@ export default function Home({ user }) {
 
   return (
     <div className="home">
-      <TopNav name={name} onComingSoon={comingSoon} groups={groups} onCreateGroup={() => setShowAddGroupModal(true)} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup}/>
+      <TopNav name={name} onComingSoon={comingSoon} groups={groups} onCreateGroup={() => setShowAddGroupModal(true)} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup} onEditProfile={() => setShowProfile(true)}/>
       {/* i added group stuff above */}
 
 
@@ -307,7 +384,7 @@ export default function Home({ user }) {
             
           </div>
 
-          <MembersPanel household={groupMembers} email={user.email} onManageMembers={() => setShowManageMembers(true)} />
+          <MembersPanel household={groupMembers} email={accountUser.email} onManageMembers={() => setShowManageMembers(true)} />
         </div>
       </main>
 
@@ -327,6 +404,15 @@ export default function Home({ user }) {
 
       {showAddGroupModal && participant && (
       <AddGroupModal participant={participant} onClose={() => setShowAddGroupModal(false)} onGroupCreated={handleGroupCreated}/>
+      )}
+
+      {showProfile && participant && (
+        <ProfileModal
+          user={accountUser}
+          participant={participant}
+          onClose={() => setShowProfile(false)}
+          onSave={handleProfileSave}
+        />
       )}
 
       {showManageMembers && (
