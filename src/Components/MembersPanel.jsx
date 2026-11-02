@@ -1,6 +1,16 @@
 import { Info, Users } from 'lucide-react'
 import Avatar from './Avatar.jsx'
 
+// The line under each member's name: leader first, then "you", then everyone else.
+function getSubtitle(person, email) {
+  const isLeader = person.id === person.groupCreatorId
+
+  if (isLeader && person.isYou) return 'You, group owner'
+  if (isLeader) return 'Group Owner'
+  if (person.isYou) return `You, ${email}`
+  return 'Roommate'
+}
+
 export default function MembersPanel({ household, email, onManageMembers }) {
   return (
     <aside className="sidebar">
@@ -24,7 +34,7 @@ export default function MembersPanel({ household, email, onManageMembers }) {
               <Avatar name={person.name} size={36} />
               <div className="member-meta">
                 <strong>{person.name}</strong>
-                <span>{person.isYou ? `You, ${email}` : 'Roommate'}</span>
+                <span>{getSubtitle(person, email)}</span>
               </div>
             </li>
           ))}

@@ -105,15 +105,18 @@ async function addGroupMember(participantId, groupId)
 // related cleanup, e.g. resource memberships, on the database side).
 async function removeGroupMember(memberId, groupId) {
     try {
-        const { data, error } = await supabase.rpc(
-            "remove_group_member",
-            {
-                target_group_id: groupId,
-                target_participant_id: memberId
-            }
-        )
+        // The group owner can't be removed. They must transfer ownership or delete the group.
+        const { data: group, error: groupError } = await supabase
+            .from("groups")
+            .select("created_by")
+            .eq("id", groupId)
+            .single()
 
-        if (error) throw error
+        if (groupError) throw groupError
+
+        if (group.created_by === memberId) {
+            throw new Error("The group owner can't be removed. Transfer ownership or delete the group first.")
+        }
 
         console.log("Successfully removed group member:", data)
         return data
@@ -171,6 +174,53 @@ async function deleteGroup(groupId)
     } catch (error)
     {
         console.error("Error deleting group: ", error.message)
+        return null
+    }
+}
+
+// Hands group ownership to another member.
+// Only works if currentOwnerId is the group's current owner and newOwnerId is already a member.
+// Returns the updated group, or null on failure.
+async function transferGroupOwnership(groupId, currentOwnerId, newOwnerId)
+{
+    try {
+        if (currentOwnerId === newOwnerId) {
+            throw new Error("That person is already the owner")
+        }
+
+        const { data: membership, error: memberError } = await supabase
+            .from("group_members")
+            .select("participant_id")
+            .eq("group_id", groupId)
+            .eq("participant_id", newOwnerId)
+            .maybeSingle()
+
+        if (memberError) throw memberError
+
+        if (!membership) {
+            throw new Error("The new owner must already be a member of the group")
+        }
+
+        // .eq("created_by", currentOwnerId) means this only updates if the caller really is the owner
+        const { data, error } = await supabase
+            .from("groups")
+            .update({ created_by: newOwnerId })
+            .eq("id", groupId)
+            .eq("created_by", currentOwnerId)
+            .select()
+            .maybeSingle()
+
+        if (error) throw error
+
+        if (!data) {
+            throw new Error("Only the group owner can transfer ownership")
+        }
+
+        console.log("successfully transferred ownership: ", data)
+        return data
+    } catch (error)
+    {
+        console.error("Error transferring ownership: ", error.message)
         return null
     }
 }
@@ -319,5 +369,6 @@ export {
     declineGroupInvite,
     acceptGroupInvite,
     getPendingInvites,
-    sendGroupInvite
+    sendGroupInvite,
+    transferGroupOwnership
 }

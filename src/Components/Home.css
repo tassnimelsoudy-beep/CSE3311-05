@@ -234,6 +234,8 @@
   color: #fff;
 }
 
+.member-actions { display: flex; gap: 8px; }
+
 /* ---------- Page layout ---------- */
 .home-main {
   max-width: 1440px;
@@ -924,4 +926,11 @@
   .next-up-actions button {
     width: 100%;
   }
+
+  .check-btn.not-yours:disabled {
+  background: var(--surface);
+  border-color: var(--line);
+  color: transparent;
+  opacity: 0.5;
+}
 }

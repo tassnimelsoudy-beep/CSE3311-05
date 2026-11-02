@@ -13,20 +13,20 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
 
   return (
     <li className={`activity-row${isMyTurn ? ' my-turn' : ''}`}>
-      <div className="col-check">
-        {rotating && rotation && (
+        <div className="col-check">
+          {rotating && rotation && (
           <button
             type="button"
-            className="check-btn"
+            className={`check-btn${isMyTurn ? '' : ' not-yours'}`}
             onClick={() => onMarkDone(activity)}
-            disabled={busy}
+            disabled={busy || !isMyTurn}
             aria-label={`Mark ${activity.name} done`}
-            title="Mark done"
+            title={isMyTurn ? 'Mark done' : 'Only the person whose turn it is can mark this done'}
           >
-            <Check size={14} aria-hidden="true" />
+          <Check size={14} aria-hidden="true" />
           </button>
-        )}
-      </div>
+          )}
+        </div>
 
       <div className="col-name">
         <strong>{activity.name}</strong>

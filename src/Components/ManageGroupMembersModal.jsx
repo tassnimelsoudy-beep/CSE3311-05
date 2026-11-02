@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { X, Search } from 'lucide-react'
 import { getAllParticipants } from '../services/participantService.js'
 
-import { getGroupMembers, sendGroupInvite, removeGroupMember } from '../services/groupService.js'
+import { getGroupMembers, sendGroupInvite, removeGroupMember, transferGroupOwnership, deleteGroup } from '../services/groupService.js'
 
-export default function ManageGroupMembersModal({ groupId, currentParticipantId, onClose, onMembersChanged }) {
+export default function ManageGroupMembersModal({ groupId, currentParticipantId, onClose, onMembersChanged, onGroupsChanged }) {
     const [participants, setParticipants] = useState([])
     const [members, setMembers] = useState([])
     const [search, setSearch] = useState('')
@@ -15,6 +15,8 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
     const [pendingAddIds, setPendingAddIds] = useState([])
     const [invitedIds, setInvitedIds] = useState([])
     const [removingId, setRemovingId] = useState(null)
+    const [transferringId, setTransferringId] = useState(null)
+    const [deleting, setDeleting] = useState(false)
 
     async function loadData() {
         setLoading(true)
@@ -40,6 +42,9 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
     }, [groupId])
 
     const memberIds = new Set(members.map(member => member.id))
+    const creatorId = members[0]?.groupCreatorId
+    const isOwner = currentParticipantId === creatorId
+    const busy = addingId !== null || removingId !== null || transferringId !== null || deleting
 
     const filteredMembers = members.filter(member =>
         member.name.toLowerCase().includes(search.toLowerCase())
@@ -98,6 +103,11 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
     }
 
     async function handleRemove(person) {
+
+        if (person.id === creatorId) {
+          setError("The group owner can't be removed. Transfer ownership or delete the group first.")
+          return
+        }
         const confirmed = window.confirm(
             `Remove ${person.name} from this group?`
         )
@@ -128,6 +138,57 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
         }
 
         setRemovingId(null)
+    }
+
+    async function handleTransfer(person) {
+      const confirmed = window.confirm(
+          `Make ${person.name} the owner of this group? You will no longer be the owner.`
+      )
+
+      if (!confirmed) return
+
+      setTransferringId(person.id)
+      setError('')
+      setSuccess('')
+
+      const result = await transferGroupOwnership(groupId, currentParticipantId, person.id)
+
+      if (!result) {
+          setError(`Could not transfer ownership to ${person.name}. Please try again.`)
+          setTransferringId(null)
+          return
+      }
+
+      const updatedMembers = await getGroupMembers(groupId)
+      if (updatedMembers) setMembers(updatedMembers)
+
+      setSuccess(`${person.name} is now the group owner.`)
+      await onMembersChanged?.()
+      await onGroupsChanged?.()
+      setTransferringId(null)
+    }
+
+    // Deletes the whole group (owner only), then closes the modal.
+    async function handleDeleteGroup() {
+        const confirmed = window.confirm(
+            'Delete this group? All members will be removed and this cannot be undone.'
+        )
+
+        if (!confirmed) return
+
+        setDeleting(true)
+        setError('')
+
+        const result = await deleteGroup(groupId)
+
+        if (!result || result.length === 0) {
+            setError('Could not delete the group. Please try again.')
+            setDeleting(false)
+            return
+        }
+
+        onClose()
+        await onGroupsChanged?.()
     }
 
     return (
@@ -178,22 +239,37 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
                         </h3>
 
                         <ul className="manage-members-list">
-                            {filteredMembers.map(person => (
+                            {filteredMembers.map(person => {
+                              const isCreator = person.id === creatorId
+
+                              return (
                                 <li key={person.id} className="manage-member-row">
                                     <div className="member-meta">
                                         <strong>{person.name}</strong>
-                                        <span>Group member</span>
+                                        <span>{isCreator ? 'Group owner' : 'Group member'}</span>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemove(person)}
-                                        disabled={removingId !== null || addingId !== null}
-                                    >
-                                        {removingId === person.id ? 'Removing...' : 'Remove'}
-                                    </button>
+                                    {!isCreator && (
+                                      <div className="member-actions">
+                                          {isOwner && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTransfer(person)}
+                                                disabled={busy}>
+                                              {transferringId === person.id ? 'Transferring...' : 'Make owner'}
+                                            </button>
+                                          )}
+                                          <button
+                                              type="button"
+                                              onClick={() => handleRemove(person)}
+                                              disabled={busy}>
+                                              {removingId === person.id ? 'Removing...' : 'Remove'}
+                                          </button>
+                                      </div>
+                                    )}
                                 </li>
-                            ))}
+                              )
+                          })}
 
                             {filteredMembers.length === 0 && (
                                 <li className="empty-state">
@@ -201,6 +277,12 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
                                 </li>
                             )}
                         </ul>
+                        {isOwner && (
+                          <p className="hint">
+                              You're the group owner, so you can't leave. Transfer ownership to another
+                              member or delete the group.
+                          </p>
+                        )}
 
                         {/* Other users */}
                         <h3 className="manage-members-heading">
@@ -258,9 +340,20 @@ export default function ManageGroupMembersModal({ groupId, currentParticipantId,
                 )}
 
                 <div className="modal-actions">
-                    <button type="button" onClick={onClose}>
-                        Done
-                    </button>
+                  {isOwner && (
+                      <button
+                          type="button"
+                          className="btn-text-danger"
+                          style={{ marginRight: 'auto' }}
+                          onClick={handleDeleteGroup}
+                          disabled={busy}
+                      >
+                          {deleting ? 'Deleting...' : 'Delete group'}
+                      </button>
+                  )}
+                  <button type="button" onClick={onClose}>
+                      Done
+                  </button>
                 </div>
             </section>
         </div>

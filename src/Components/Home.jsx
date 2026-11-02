@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getCurrentParticipant } from '../services/participantService.js'
-import { advanceTurn } from '../services/rotationService.js'
+import { completeTurn } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
 import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
 import { createReservation } from '../services/reservationService.js'
@@ -139,21 +139,27 @@ export default function Home({ user }) {
   const firstName = name.split(' ')[0]
   const meId = participant?.id
 
-  async function handleMarkDone(activity) {
-    setBusyId(activity.id)
-    const updated = await advanceTurn(activity.id)
-    setBusyId(null)
-
-    if (!updated) {
-      showToast(`Couldn’t update ${activity.name}. Try again.`)
-      return
-    }
-    // Update in place (no re-sort) so the row doesn't jump away from the pointer.
-    setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
-    const next = activity.members.find(member => member.id === updated.current_participant_id)
-    const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
-    showToast(`Marked ${activity.name} done. ${who} up next.`)
+async function handleMarkDone(activity) {
+  // Only the person whose turn it is can pass it on
+  if (activity.rotation?.current_participant_id !== meId) {
+    showToast('Only the person whose turn it is can mark this done.')
+    return
   }
+
+  setBusyId(activity.id)
+  const updated = await completeTurn(activity.id, meId)
+  setBusyId(null)
+
+  if (!updated) {
+    showToast(`Couldn’t update ${activity.name}. Try again.`)
+    return
+  }
+  // Update in place (no re-sort) so the row doesn't jump away from the pointer.
+  setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
+  const next = activity.members.find(member => member.id === updated.current_participant_id)
+  const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
+  showToast(`Marked ${activity.name} done. ${who} up next.`)
+}
 
   async function handleCreate(values) {
     if (!selectedGroup) {
@@ -312,6 +318,7 @@ export default function Home({ user }) {
           currentParticipantId={meId}
           onClose={() => setShowManageMembers(false)}
           onMembersChanged={loadHouseholdMembers}
+          onGroupsChanged={reloadGroups}
         />
       )}
 
