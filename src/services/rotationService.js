@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 
+const ONLY_HOLDER_CAN_ADVANCE = true //this and activity panel control who can advance turn
+
 
 // Creates a rotation schedule for a resource (e.g. every 1 "week").
 // Sets the current person to the first in the turn order and
@@ -285,6 +287,20 @@ async function getNextParticipantForResource(resourceId, currentParticipantId)
 
     return getNextParticipant(participants, currentParticipantId)
 }
+
+// Called when someone clicks "mark done". Only the person whose turn it is
+// may pass the turn on. Returns the updated rotation, or null if not allowed.
+async function completeTurn(resourceId, participantId)
+{
+    const rotation = await getRotation(resourceId)
+
+    if (ONLY_HOLDER_CAN_ADVANCE && (!rotation || !participantId || rotation.current_participant_id !== participantId)) {
+        console.error("Only the current holder can mark this turn done")
+        return null
+    }
+
+    return advanceTurn(resourceId)
+}
 export {
     createRotation,
     getRotation,
@@ -297,5 +313,6 @@ export {
     advanceIfDue,
     advanceTurn,
     nextRotationDate,
-    followingDueDate
+    followingDueDate,
+    completeTurn
 }

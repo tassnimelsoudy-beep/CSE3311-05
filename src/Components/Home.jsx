@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getCurrentParticipant } from '../services/participantService.js'
-import { advanceTurn } from '../services/rotationService.js'
+import { completeTurn } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
 import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
 import { createReservation } from '../services/reservationService.js'
@@ -139,21 +139,27 @@ export default function Home({ user }) {
   const firstName = name.split(' ')[0]
   const meId = participant?.id
 
-  async function handleMarkDone(activity) {
-    setBusyId(activity.id)
-    const updated = await advanceTurn(activity.id)
-    setBusyId(null)
-
-    if (!updated) {
-      showToast(`Couldn’t update ${activity.name}. Try again.`)
-      return
-    }
-    // Update in place (no re-sort) so the row doesn't jump away from the pointer.
-    setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
-    const next = activity.members.find(member => member.id === updated.current_participant_id)
-    const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
-    showToast(`Marked ${activity.name} done. ${who} up next.`)
+async function handleMarkDone(activity) {
+  // Only the person whose turn it is can pass it on
+  if (activity.rotation?.current_participant_id !== meId) {
+    showToast('Only the person whose turn it is can mark this done.')
+    return
   }
+
+  setBusyId(activity.id)
+  const updated = await completeTurn(activity.id, meId)
+  setBusyId(null)
+
+  if (!updated) {
+    showToast(`Couldn’t update ${activity.name}. Try again.`)
+    return
+  }
+  // Update in place (no re-sort) so the row doesn't jump away from the pointer.
+  setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
+  const next = activity.members.find(member => member.id === updated.current_participant_id)
+  const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
+  showToast(`Marked ${activity.name} done. ${who} up next.`)
+}
 
   async function handleCreate(values) {
     if (!selectedGroup) {
@@ -205,6 +211,17 @@ export default function Home({ user }) {
     setSelectedGroup(merged.find(g => g.id === newGroup.id))
   }
 
+    // Reloads the user's groups (e.g. after accepting an invite) and keeps
+  // the current selection if it still exists.
+  async function reloadGroups() {
+    if (!participant) return
+    const fetched = ((await getGroupsForUser(participant.id)) || []).filter(Boolean)
+    setGroups(fetched)
+    setSelectedGroup(current =>
+      fetched.find(g => g.id === current?.id) || fetched[0] || null
+    )
+  }
+
   async function loadHouseholdMembers() {
     if (!selectedGroup || !participant) {
       setGroupMembers([]);
@@ -228,9 +245,16 @@ export default function Home({ user }) {
 
   return (
     <div className="home">
-      <TopNav name={name} onComingSoon={comingSoon} groups={groups} onCreateGroup={() => setShowAddGroupModal(true)} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup}/>
-      {/* i added group stuff above */}
-
+      <TopNav
+        name={name}
+        onComingSoon={comingSoon}
+        participantId={meId}
+        onGroupsChanged={reloadGroups}
+        groups={groups}
+        onCreateGroup={() => setShowAddGroupModal(true)}
+        selectedGroup={selectedGroup}
+        onSelectGroup={setSelectedGroup}
+      />
 
       <main className="home-main">
         <h1 className="greeting">Hi, {firstName}</h1>
@@ -289,7 +313,13 @@ export default function Home({ user }) {
       )}
 
       {showManageMembers && (
-      <ManageGroupMembersModal groupId={selectedGroup?.id} onClose={() => setShowManageMembers(false)}  onMembersChanged={loadHouseholdMembers}/>
+        <ManageGroupMembersModal
+          groupId={selectedGroup?.id}
+          currentParticipantId={meId}
+          onClose={() => setShowManageMembers(false)}
+          onMembersChanged={loadHouseholdMembers}
+          onGroupsChanged={reloadGroups}
+        />
       )}
 
       <Toast toast={toast} onDone={hideToast} />
