@@ -382,6 +382,7 @@ async function handleMarkDone(activity) {
         onCreateGroup={() => setShowAddGroupModal(true)}
         selectedGroup={selectedGroup}
         onSelectGroup={setSelectedGroup}
+        onEditProfile={() => setShowProfile(true)}
       />
 
       <main className="home-main">
