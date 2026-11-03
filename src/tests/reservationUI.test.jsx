@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import ActivityPanel from '../Components/ActivityPanel.jsx'
 import AddResourceModal from '../Components/AddResourceModal.jsx'
+import { formatReservationWindow } from '../utils/activity.js'
 
 describe('reservation screens', () => {
   it('creates a reservation resource without rotation settings', async () => {
@@ -61,9 +62,10 @@ describe('reservation screens', () => {
     )
 
     expect(screen.getByText('Alex Chen')).toBeInTheDocument()
-    expect(screen.getByText(
-      `${new Date(activity.reservations[0].starts_at).toLocaleString()} – ${new Date(activity.reservations[0].ends_at).toLocaleString()}`
-    )).toBeInTheDocument()
+    // The row shows the window in words ("Jan 1, 3 – 4 AM") rather than two
+    // full timestamps; reservationTime.test.js covers the wording itself.
+    const { starts_at: startsAt, ends_at: endsAt } = activity.reservations[0]
+    expect(screen.getByText(formatReservationWindow(startsAt, endsAt))).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }))
     expect(onReserve).toHaveBeenCalledWith(activity)

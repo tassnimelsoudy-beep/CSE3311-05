@@ -104,10 +104,155 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
+.invites-bell
 .btn-ghost:hover:not(:disabled) {
   border-color: var(--ink-faint);
   color: var(--ink);
 }
+
+
+/* ---------- Notifications dropdown ---------- */
+.notification-wrapper {
+  position: relative;
+}
+
+/* Round bell button, scoped so other .icon-btn buttons are unchanged */
+.notification-wrapper .icon-btn {
+  position: relative;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.notification-wrapper .icon-btn:hover:not(:disabled) {
+  border-color: var(--ink-faint);
+}
+
+.notification-dot {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--turn);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(360px, 90vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 28px rgba(23, 51, 47, 0.18);
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notifications-header h3 {
+  font-size: 1rem;
+}
+
+.notifications-header button {
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.notification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  text-align: left;
+}
+
+.notification-item.unread {
+  background: var(--turn-tint);
+}
+
+.notification-item.read {
+  opacity: 0.65;
+}
+
+.notification-item span {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.notification-item small {
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+}
+
+/* Group invites inside the panel */
+.invite-section {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.invite-section h4 {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.invite-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.invite-actions button {
+  padding: 5px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.invite-actions button:first-child {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+
+.member-actions { display: flex; gap: 8px; }
 
 /* ---------- Page layout ---------- */
 .home-main {
@@ -287,6 +432,21 @@
   font-weight: 500;
 }
 
+/* A reservation item that is booked right now */
+.in-use {
+  color: #8a5d05;
+  font-weight: 500;
+}
+
+.tag-now {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--turn);
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .badge {
   display: inline-block;
   padding: 3px 10px;
@@ -383,6 +543,18 @@
 .reservation-list li {
   display: grid;
   gap: 2px;
+}
+
+.reservation-list li strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The booking under way reads a shade stronger than the ones still to come */
+.reservation-now span {
+  color: var(--ink) !important;
+  font-weight: 500;
 }
 
 .reservation-list li span {
@@ -808,4 +980,141 @@
   .next-up-actions button {
     width: 100%;
   }
+
+  .check-btn.not-yours:disabled {
+  background: var(--surface);
+  border-color: var(--line);
+  color: transparent;
+  opacity: 0.5;
+}
+}
+/* Notification dropdown */
+
+.notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  padding: 20px;
+  background: white;
+  border: 1px solid #e2e8e5;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+}
+
+.notifications-panel h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  color: #183b34;
+}
+
+.notifications-panel p {
+  margin: 0;
+  font-size: 14px;
+  color: #64746f;
+}
+
+/* ---- No-group nudge (dashboard, shown only when you belong to no group) ---- */
+.no-group-prompt {
+  position: relative;
+  padding: 24px 26px;
+  background: linear-gradient(180deg, var(--brand-tint) 0%, var(--surface) 70%);
+}
+
+.no-group-prompt h2 {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  margin: 0 0 6px;
+}
+
+.no-group-prompt > p {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--ink-soft);
+}
+
+.no-group-dismiss {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.no-group-dismiss:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.no-group-paths {
+  list-style: none;
+  margin: 18px 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.no-group-paths li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.no-group-paths svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--brand);
+}
+
+.no-group-paths div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.no-group-paths strong {
+  font-size: 0.95rem;
+}
+
+.no-group-paths span {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.no-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* .btn-primary is full-width app-wide; inside this card it sits beside the
+   dismiss button instead. */
+.no-group-actions .btn-primary {
+  width: auto;
+}
+
+.no-group-prompt .hint {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
 }
