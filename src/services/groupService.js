@@ -118,8 +118,19 @@ async function removeGroupMember(memberId, groupId) {
             throw new Error("The group owner can't be removed. Transfer ownership or delete the group first.")
         }
 
+        const { data, error } = await supabase.rpc(
+            "remove_group_member",
+            {
+                target_group_id: groupId,
+                target_participant_id: memberId
+            }
+        )   
+
+        if (error) throw error
+
         console.log("Successfully removed group member:", data)
         return data
+
     } catch (error) {
         console.error("Error removing group member:", error)
         return null
