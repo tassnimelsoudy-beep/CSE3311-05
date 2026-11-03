@@ -1,3 +1,4 @@
+// @flow
 import { supabase } from '../lib/supabase.js'
 
 // Creates a new group and adds the creator as its first member.

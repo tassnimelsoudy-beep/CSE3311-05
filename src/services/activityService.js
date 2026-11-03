@@ -1,3 +1,5 @@
+// @flow
+
 // Combines the resource, participant and rotation services into what the
 // dashboard needs: each activity together with its members and rotation.
 import {

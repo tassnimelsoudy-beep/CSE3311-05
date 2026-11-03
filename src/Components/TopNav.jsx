@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Home as HouseIcon, ChevronDown, Bell, LogOut } from 'lucide-react'
+import { Home as HouseIcon, ChevronDown, Bell, LogOut, UserRound } from 'lucide-react'
 import { logout } from '../services/authService.js'
 import {
   getNotifications,
@@ -11,7 +11,7 @@ import { useInvites } from '../hooks/useInvites.js'
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
-export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup, participantId, onGroupsChanged }) {
+export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup, participantId, onGroupsChanged,  onEditProfile }) {
   const [loggingOut, setLoggingOut] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
@@ -219,8 +219,11 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
         </div>
 
         <div className="profile">
+        <button type="button" className="profile profile-button" onClick={onEditProfile} aria-label="Edit profile">
           <Avatar name={name} size={32} />
           <span className="profile-name">{name}</span>
+          <UserRound size={15} aria-hidden="true" />
+        </button>
         </div>
         <button
           type="button"

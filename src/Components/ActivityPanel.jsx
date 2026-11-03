@@ -31,7 +31,7 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
             type="button"
             className={`check-btn${isMyTurn ? '' : ' not-yours'}`}
             onClick={() => onMarkDone(activity)}
-            disabled={busy || !isMyTurn}
+            disabled={busy || !isMyTurn}  //removing !isMyTurn probably disables locked turn completion
             aria-label={`Mark ${activity.name} done`}
             title={isMyTurn ? 'Mark done' : 'Only the person whose turn it is can mark this done'}
           >

@@ -8,6 +8,7 @@ import { canManage, getOwnerName } from '../utils/activity.js'
 vi.mock('../services/authService.js', () => ({
   login: vi.fn(),
   signUp: vi.fn(),
+  updateAccount: vi.fn(),
   logout: vi.fn(),
   onAuthChange: vi.fn(callback => {
     callback({ user: { id: 'u1', email: 'sarah@example.com', user_metadata: {} } })
@@ -26,9 +27,13 @@ vi.mock('../services/groupService.js', () => ({
   acceptGroupInvite: vi.fn(),
   declineGroupInvite: vi.fn(),
 }))
-vi.mock('../services/reservationService.js', () => ({ createReservation: vi.fn() }))
+vi.mock('../services/reservationService.js', () => ({
+  createReservation: vi.fn(),
+  subscribeToReservationChanges: vi.fn(() => () => {}),
+}))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
+  updateCurrentParticipantName: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
