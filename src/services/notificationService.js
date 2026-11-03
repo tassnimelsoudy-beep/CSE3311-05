@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabase.js'
 
 // Get notifications belonging to the signed-in user
