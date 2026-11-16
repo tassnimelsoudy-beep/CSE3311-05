@@ -29,7 +29,10 @@ vi.mock('../services/activityService.js', () => ({
   createReservationActivity: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
-vi.mock('../services/reservationService.js', () => ({ createReservation: vi.fn() }))
+vi.mock('../services/reservationService.js', () => ({
+  createReservation: vi.fn(),
+  subscribeToReservationChanges: vi.fn(() => () => {}),
+}))
 vi.mock('../services/notificationService.js', () => ({
   getNotifications: vi.fn(() => Promise.resolve([])),
   markAllNotificationsRead: vi.fn(),
