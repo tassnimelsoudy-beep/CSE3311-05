@@ -26,12 +26,17 @@ function loadCalendarEvents(activities, rangeStart, rangeEnd) {
 
 
 function getRotationEvents(activity, rangeStart, rangeEnd, now = new Date()) {
+
     const rotation = activity.rotation
     const members = activity.members || []
 
     if (!rotation || !rotation.next_rotation_at || members.length === 0) {
         return []
     }
+        console.log(
+        activity.name,
+        'members:', members.map(member => member.name),
+        'current:', rotation.current_participant_id )
 
     const orderedMembers = turnOrderFromCurrent(
         members,
@@ -59,20 +64,15 @@ function getRotationEvents(activity, rangeStart, rangeEnd, now = new Date()) {
 
         // Only show the event if the rotation changes inside the visible range.
         if (currentEnd >= rangeStart && currentEnd < rangeEnd) {
-            const nextParticipantIndex =
-                (participantIndex + 1) % orderedMembers.length
-
-            const nextParticipant = orderedMembers[nextParticipantIndex]
-
             events.push({
-                id: `turn-${activity.id}-${nextParticipant.id}-${currentEnd.toISOString()}`,
-                title: `${activity.name} → ${nextParticipant.name}`,
+                id: `turn-${activity.id}-${participant.id}-${currentEnd.toISOString()}`,
+                title: `${activity.name}: ${participant.name}`,
                 start: currentEnd.toISOString(),
                 allDay: true,
                 extendedProps: {
-                    kind: 'Rotation Change',
+                    kind: 'Turn due',
                     activity: activity.name,
-                    person: nextParticipant.name,
+                    person: participant.name,
                     when: currentEnd.toISOString(),
                 },
             })

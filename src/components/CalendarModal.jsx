@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { loadCalendarEvents } from '../services/calendarService.js'
 import Calendar from './Calendar.jsx'
@@ -21,7 +21,14 @@ export default function CalendarModal({ activities, onClose }) {
         )
     }
 
-    const events = range ? loadCalendarEvents(activities, range.start, range.end) : []
+    const events = useMemo(
+        () => (range ? loadCalendarEvents(activities, range.start, range.end) : []),
+        [activities, range]
+    )
+
+    const rotationKey = (activities || [])
+        .map(a => `${a.id}:${a.rotation?.current_participant_id}:${(a.members || []).map(m => m.id).join(',')}`)
+        .join('|')
     return (
         <>
         <div className="modal-backdrop" onClick={onClose}>
@@ -39,7 +46,12 @@ export default function CalendarModal({ activities, onClose }) {
                 </button>
             </div>
 
-            <Calendar events={events} onEventClick={event => setSelected(event.extendedProps)} onRangeChange={handleRangeChange}/>
+           <Calendar
+                key={rotationKey}
+                events={events}
+                onEventClick={event => setSelected(event.extendedProps)}
+                onRangeChange={handleRangeChange}
+            />
             </section>
         </div>
 
@@ -61,10 +73,22 @@ export default function CalendarModal({ activities, onClose }) {
                 </div>
 
                 <span className="badge badge-plain">{selected.kind}</span>
-                {selected.person && <p className="event-line">{selected.person}</p>}
-                <p className="event-line">
-                    Rotation changes: {new Date(selected.when).toLocaleDateString()}
-                </p>
+
+                {selected.person && (
+                    <p className="event-line">
+                        {selected.kind === 'Rotation Change' ? `Next up: ${selected.person}` : selected.person}
+                    </p>
+                )}
+
+                {selected.kind === 'Reservation' ? (
+                    <p className="event-line">
+                        {new Date(selected.when).toLocaleString()} – {new Date(selected.until).toLocaleString()}
+                    </p>
+                ) : (
+                    <p className="event-line">
+                        Rotation changes: {new Date(selected.when).toLocaleDateString()}
+                    </p>
+                )}
             </section>
             </div>
         )}
