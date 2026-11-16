@@ -1,57 +1,27 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import { loadCalendarEvents } from '../services/calendarService.js'
 import Calendar from './Calendar.jsx'
-import { isRotation } from '../utils/activity.js'
 
-// Turns the dashboard's activities into FullCalendar events:
-// a rotation's next due time, and every reservation's start and end.
-function buildEvents(activities) {
 
-    const events = []
 
-    for (const activity of activities || []) {
-        if (isRotation(activity)) {
-
-            const due = activity.rotation?.next_rotation_at
-            if (!due) continue
-
-            const holder = activity.members?.find(member => member.id === activity.rotation.current_participant_id)
-            events.push({
-                id: `turn-${activity.id}`,
-                title: holder ? `${activity.name} (${holder.name})` : activity.name,
-                start: due,
-                extendedProps: {
-                    kind: 'Turn due',
-                    activity: activity.name,
-                    person: holder?.name,
-                    when: due,
-                },
-            })
-        } else {
-            for (const reservation of activity.reservations || []) {
-                events.push({
-                    id: `res-${reservation.id}`,
-                    title: `${activity.name}: ${reservation.participants?.name || 'Group member'}`,
-                    start: reservation.starts_at,
-                    end: reservation.ends_at,
-                    extendedProps: {
-                        kind: 'Reservation',
-                        activity: activity.name,
-                        person: reservation.participants?.name,
-                        when: reservation.starts_at,
-                        until: reservation.ends_at,
-                    },
-                })
-            }
-        }
-    }
-
-    return events
-}
 
 export default function CalendarModal({ activities, onClose }) {
     const [selected, setSelected] = useState(null)
-    const events = buildEvents(activities)
+    const [range, setRange] = useState(null)
+
+
+    function handleRangeChange(next) {
+    setRange(current =>
+            current &&
+            current.start.getTime() === next.start.getTime() &&
+            current.end.getTime() === next.end.getTime()
+            ? current
+            : next
+        )
+    }
+
+    const events = range ? loadCalendarEvents(activities, range.start, range.end) : []
     return (
         <>
         <div className="modal-backdrop" onClick={onClose}>
@@ -69,7 +39,7 @@ export default function CalendarModal({ activities, onClose }) {
                 </button>
             </div>
 
-            <Calendar events={events} onEventClick={event => setSelected(event.extendedProps)} />
+            <Calendar events={events} onEventClick={event => setSelected(event.extendedProps)} onRangeChange={handleRangeChange}/>
             </section>
         </div>
 
@@ -93,8 +63,7 @@ export default function CalendarModal({ activities, onClose }) {
                 <span className="badge badge-plain">{selected.kind}</span>
                 {selected.person && <p className="event-line">{selected.person}</p>}
                 <p className="event-line">
-                {new Date(selected.when).toLocaleString()}
-                {selected.until && ` – ${new Date(selected.until).toLocaleString()}`}
+                    Rotation changes: {new Date(selected.when).toLocaleDateString()}
                 </p>
             </section>
             </div>

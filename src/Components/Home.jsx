@@ -424,7 +424,7 @@ async function handleMarkDone(activity) {
                 meId={meId}
                 onClose={() => setShowReminders(false)}
               />
-)}
+            )}
             
           </div>
 

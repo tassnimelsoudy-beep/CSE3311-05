@@ -1,130 +1,80 @@
-import { getRotation, nextRotationDate } from "./rotationService"
-import { getResourcesForGroup } from "./resourceService"
-import {} from "./reservationService"
-import { turnOrderFromCurrent } from '../utils/activity.js'
+import { getRotationParticipants, advanceIfDue, nextRotationDate } from './rotationService.js'
+import { getResourcesForGroup } from './resourceService.js'
+import { getReservationsForResource } from './reservationService.js'
+import { isRotation, turnOrderFromCurrent } from '../utils/activity.js'
 
 
-async function loadCalendarEvents(groupId, rangeStart, rangeEnd) {
-    if (!groupId) return []
+const MAX_STEPS = 2000
+const MAX_EVENTS_PER_ACTIVITY = 200
 
-    try {
-        // Get all resources belonging to this group.
-        const resources = await getResourcesForGroup(groupId)
+// Loads every calendar event for a group inside the visible date range:
+// each rotation's turns and each reservation.
+// Returns an array of events, or null if loading failed.
+function loadCalendarEvents(activities, rangeStart, rangeEnd) {
+    const events = []
 
-        if (!resources) return null
-
-        const events = await Promise.all(
-            resources.map(async resource => {
-                const resourceEvents = []
-
-                // Generate rotation events if this resource uses rotations.
-                if (isRotation(resource)) {
-                    const [rotation, members] = await Promise.all([
-                        getRotation(resource.id),
-                        getRotationParticipants(resource.id)
-                    ])
-
-                    if (rotation && members) {
-                        const activity = {
-                            ...resource,
-                            rotation,
-                            members
-                        }
-
-                        resourceEvents.push(
-                            ...generateRotationEvents(
-                                activity,
-                                rangeStart,
-                                rangeEnd
-                            )
-                        )
-                    }
-                }
-
-                // Retrieve reservations for this resource.
-                const reservations = await getReservationsForResource(
-                    resource.id,
-                    rangeStart,
-                    rangeEnd
-                )
-
-                if (reservations) {
-                    const activity = {
-                        ...resource,
-                        reservations
-                    }
-
-                    resourceEvents.push(
-                        ...generateReservationEvents(
-                            activity,
-                            rangeStart,
-                            rangeEnd
-                        )
-                    )
-                }
-
-                return resourceEvents
-            })
-        )
-
-        // Combine all resource events into one array.
-        return events.flat()
-
-    } catch (error) {
-        console.error('Error loading calendar events:', error.message)
-        return null
+    for (const activity of activities || []) {
+        if (isRotation(activity)) {
+            events.push(...getRotationEvents(activity, rangeStart, rangeEnd))
+        } else {
+            events.push(...getReservationEvents(activity, rangeStart, rangeEnd))
+        }
     }
+
+    return events
 }
 
-function getRotationEvents(activity, rangeStart, rangeEnd, now = new Date())
-{
+
+function getRotationEvents(activity, rangeStart, rangeEnd, now = new Date()) {
     const rotation = activity.rotation
     const members = activity.members || []
 
-    // Make sure we have enough information to generate events.
     if (!rotation || !rotation.next_rotation_at || members.length === 0) {
         return []
     }
 
-    // current participant first
     const orderedMembers = turnOrderFromCurrent(
         members,
         rotation.current_participant_id
     )
 
-    // Find the date when the current participant's turn ends.
     let currentStart = new Date(now)
     let currentEnd = new Date(rotation.next_rotation_at)
 
-   
-    if (!Number.isFinite(currentEnd.getTime())) {
+    if (!Number.isFinite(currentEnd.getTime()) || currentEnd <= currentStart) {
         return []
     }
 
-
     const events = []
-
     let participantIndex = 0
+    let steps = 0
 
-    while (currentStart < rangeEnd) {
+    while (
+        currentStart < rangeEnd &&
+        steps < MAX_STEPS &&
+        events.length < MAX_EVENTS_PER_ACTIVITY
+    ) {
         const participant = orderedMembers[participantIndex]
-
         if (!participant) break
 
-        // Only include events that overlap the requested calendar range.
-        if (currentEnd > rangeStart) {
+        // Only show the event if the rotation changes inside the visible range.
+        if (currentEnd >= rangeStart && currentEnd < rangeEnd) {
+            const nextParticipantIndex =
+                (participantIndex + 1) % orderedMembers.length
+
+            const nextParticipant = orderedMembers[nextParticipantIndex]
+
             events.push({
-                id: `${activity.id}-${participant.id}-${currentStart.toISOString()}`,
-                title: `${activity.name} - ${participant.name}`,
-                start: currentStart.toISOString(),
-                end: currentEnd.toISOString(),
-                allDay: false,
+                id: `turn-${activity.id}-${nextParticipant.id}-${currentEnd.toISOString()}`,
+                title: `${activity.name} → ${nextParticipant.name}`,
+                start: currentEnd.toISOString(),
+                allDay: true,
                 extendedProps: {
-                    type: 'rotation',
-                    resourceId: activity.id,
-                    participantId: participant.id,
-                    participantName: participant.name
-                }
+                    kind: 'Rotation Change',
+                    activity: activity.name,
+                    person: nextParticipant.name,
+                    when: currentEnd.toISOString(),
+                },
             })
         }
 
@@ -139,52 +89,35 @@ function getRotationEvents(activity, rangeStart, rangeEnd, now = new Date())
         if (!nextEnd) break
 
         currentEnd = new Date(nextEnd)
-
         participantIndex = (participantIndex + 1) % orderedMembers.length
+        steps++
     }
 
     return events
 }
 
+
+// One event per reservation that overlaps the visible range.
 function getReservationEvents(activity, rangeStart, rangeEnd)
 {
-
-    const reservations = activity.reservations || []
-
-    return reservations 
-        .filter(reservation => {
-            const start = new Date(reservation.starts_at)
-            const end = new Date(reservation.ends_at)
-
-            // Ignore invalid dates.
-            if (!Number.isFinite(start.getTime()) ||
-                !Number.isFinite(end.getTime())) {
-                return false
-            }
-
-            // Include reservations that overlap the calendar range.
-            return start < rangeEnd && end > rangeStart
-        })
+    return (activity.reservations || [])
+        .filter(reservation =>
+            new Date(reservation.ends_at) > rangeStart &&
+            new Date(reservation.starts_at) < rangeEnd
+        )
         .map(reservation => ({
-            id: `reservation-${reservation.id}`,
-            title: `${activity.name} - ${reservation.participants?.name || 'Reserved'}`,
+            id: `res-${reservation.id}`,
+            title: `${activity.name}: ${reservation.participants?.name || 'Group member'}`,
             start: reservation.starts_at,
             end: reservation.ends_at,
-            allDay: false,
             extendedProps: {
-                type: 'reservation',
-                resourceId: activity.id,
-                reservationId: reservation.id,
-                participantId: reservation.participant_id,
-                participantName: reservation.participants?.name || null
-            }
+                kind: 'Reservation',
+                activity: activity.name,
+                person: reservation.participants?.name,
+                when: reservation.starts_at,
+                until: reservation.ends_at,
+            },
         }))
-    
 }
 
-
-export {
-    loadCalendarEvents,
-    getRotationEvents,
-    getReservationEvents
-}
+export { loadCalendarEvents }
