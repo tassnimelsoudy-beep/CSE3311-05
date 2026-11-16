@@ -3,10 +3,11 @@ import { updateAccount } from '../services/authService.js'
 import { getCurrentParticipant, updateCurrentParticipantName } from '../services/participantService.js'
 import { completeTurn, reorderRotation, getRotationParticipants } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
-import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
-import { createReservation, subscribeToReservationChanges } from '../services/reservationService.js'
+import { loadActivities, createRotatingActivity, createReservationActivity, createOneOffTask } from '../services/activityService.js'
+import { createReservation, subscribeToGroupActivityChanges } from '../services/reservationService.js'
+import { completeOneOffTask } from '../services/oneOffTaskService.js'
 import { getDisplayName } from '../utils/avatar.js'
-import { getNextUp } from '../utils/activity.js'
+import { getNextUp, isOneOffTask, sortActivities } from '../utils/activity.js'
 import { useActivityEditing } from '../hooks/useActivityEditing.js'
 import TopNav from './TopNav.jsx'
 import ActivityPanel from './ActivityPanel.jsx'
@@ -136,7 +137,7 @@ export default function Home({ user }) {
       }
     }
 
-    const unsubscribe = subscribeToReservationChanges(refreshActivities)
+    const unsubscribe = subscribeToGroupActivityChanges(refreshActivities)
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         refreshActivities()
@@ -304,6 +305,21 @@ async function handleReorder(orderedIds) {
 }
 
 async function handleMarkDone(activity) {
+  if (isOneOffTask(activity)) {
+    setBusyId(activity.id)
+    const result = await completeOneOffTask(activity.id, meId)
+    setBusyId(null)
+
+    if (!result.completed) {
+      showToast(result.error || `Couldn’t complete ${activity.name}. Try again.`)
+      return
+    }
+
+    setActivities(list => list.filter(item => item.id !== activity.id))
+    showToast(`Completed ${activity.name}. It’s removed for everyone in the group.`)
+    return
+  }
+
   // Only the person whose turn it is can pass it on
   if (activity.rotation?.current_participant_id !== meId) {
     showToast('Only the person whose turn it is can mark this done.')
@@ -331,14 +347,26 @@ async function handleMarkDone(activity) {
     }
     const created = values.sharingMethod === 'Reservation'
       ? await createReservationActivity(values)
-      : await createRotatingActivity(values)
+      : values.sharingMethod === 'One-off'
+        ? await createOneOffTask(values)
+        : await createRotatingActivity(values)
     if (!created) {
       return 'Couldn’t add the activity. Try again.'
     }
     const list = await loadActivities(meId, selectedGroup?.id)
-    if (list) setActivities(list)
+    if (list) {
+      setActivities(list)
+      showToast(`Added ${values.name}.`)
+    } else if (values.sharingMethod === 'One-off') {
+      setActivities(current => sortActivities([
+        ...(current || []).filter(activity => activity.id !== created.id),
+        { ...created, members: [], rotation: null, reservations: [] },
+      ]))
+      showToast(`Added ${values.name}, but couldn’t refresh group activities. Check your connection and confirm the one-off task Supabase migration is applied.`)
+    } else {
+      showToast(`Added ${values.name}, but couldn’t refresh group activities. Check your connection and try again.`)
+    }
     setAdding(false)
-    showToast(`Added ${values.name}.`)
     return null
   }
 

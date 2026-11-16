@@ -25,7 +25,10 @@ vi.mock('../services/groupService.js', () => ({
 }))
 vi.mock('../services/reservationService.js', () => ({
   createReservation: vi.fn(),
-  subscribeToReservationChanges: vi.fn(() => () => {}),
+  subscribeToGroupActivityChanges: vi.fn(() => () => {}),
+}))
+vi.mock('../services/oneOffTaskService.js', () => ({
+  completeOneOffTask: vi.fn(),
 }))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
@@ -36,6 +39,7 @@ vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(),
   createRotatingActivity: vi.fn(),
   createReservationActivity: vi.fn(),
+  createOneOffTask: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
@@ -62,6 +66,7 @@ vi.mock('../services/activityService.js', () => ({
   ),
   createRotatingActivity: vi.fn(),
   createReservationActivity: vi.fn(),
+  createOneOffTask: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
 }))
@@ -69,6 +74,8 @@ vi.mock('../services/activityService.js', () => ({
 import { signUp, onAuthChange, updateAccount } from '../services/authService.js'
 import { updateCurrentParticipantName } from '../services/participantService.js'
 import { completeTurn } from '../services/rotationService.js'
+import { completeOneOffTask } from '../services/oneOffTaskService.js'
+import { createOneOffTask, loadActivities } from '../services/activityService.js'
 import AuthScreen from '../Components/AuthScreen.jsx'
 import App from '../App.jsx'
 
@@ -117,6 +124,55 @@ function logInAsSarah() {
 }
 
 describe('Home dashboard', () => {
+  it('shows a created one-off task and warns if the task list cannot refresh', async () => {
+    logInAsSarah()
+    const task = {
+      id: 8,
+      name: 'Wipe the counters',
+      sharing_method: 'One-off',
+      created_by: 1,
+      group_id: 'g1',
+    }
+    loadActivities.mockResolvedValueOnce([]).mockResolvedValueOnce(null)
+    createOneOffTask.mockResolvedValue(task)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Add activity' }))
+    await user.type(screen.getByLabelText('Name'), 'Wipe the counters')
+    await user.click(screen.getByRole('button', { name: 'One-off task' }))
+    await user.click(screen.getAllByRole('button', { name: 'Add activity' }).at(-1))
+
+    expect(await screen.findByText('Wipe the counters')).toBeInTheDocument()
+    expect(await screen.findByText(/confirm the one-off task Supabase migration is applied/)).toBeInTheDocument()
+    expect(createOneOffTask).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Wipe the counters',
+      sharingMethod: 'One-off',
+      groupId: 'g1',
+    }))
+  })
+
+  it('removes a one-off task for the group after a member marks it done', async () => {
+    logInAsSarah()
+    loadActivities.mockResolvedValueOnce([{
+      id: 8,
+      name: 'Wipe the counters',
+      sharing_method: 'One-off',
+      created_by: 2,
+      members: [],
+      reservations: [],
+    }])
+    completeOneOffTask.mockResolvedValue({ completed: true, error: null })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Mark Wipe the counters done' }))
+
+    expect(completeOneOffTask).toHaveBeenCalledWith(8, 1)
+    expect(await screen.findByText(/Completed Wipe the counters. It’s removed for everyone/)).toBeInTheDocument()
+    expect(screen.queryByText('Wipe the counters')).not.toBeInTheDocument()
+  })
+
   it('lets a user update their name and syncs it to the group participant', async () => {
     logInAsSarah()
     updateAccount.mockResolvedValue({

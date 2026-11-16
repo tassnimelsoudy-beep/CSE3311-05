@@ -27,12 +27,14 @@ vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(() => Promise.resolve([])),
   createRotatingActivity: vi.fn(),
   createReservationActivity: vi.fn(),
+  createOneOffTask: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/reservationService.js', () => ({
   createReservation: vi.fn(),
-  subscribeToReservationChanges: vi.fn(() => () => {}),
+  subscribeToGroupActivityChanges: vi.fn(() => () => {}),
 }))
+vi.mock('../services/oneOffTaskService.js', () => ({ completeOneOffTask: vi.fn() }))
 vi.mock('../services/notificationService.js', () => ({
   getNotifications: vi.fn(() => Promise.resolve([])),
   markAllNotificationsRead: vi.fn(),

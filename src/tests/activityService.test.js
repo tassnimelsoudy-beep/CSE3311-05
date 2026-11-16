@@ -3,10 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../services/resourceService.js', () => ({
   getResourcesForUser: vi.fn(),
+  getResourcesForGroup: vi.fn(),
   createResource: vi.fn(),
   addResourceMembers: vi.fn(),
   updateResource: vi.fn(),
   deleteResource: vi.fn(),
+}))
+vi.mock('../services/oneOffTaskService.js', () => ({
+  getCompletedOneOffTaskIds: vi.fn(),
+}))
+vi.mock('../services/reservationService.js', () => ({
+  getReservationsForResource: vi.fn(),
 }))
 vi.mock('../services/rotationService.js', () => ({
   getRotationParticipants: vi.fn(),
@@ -15,9 +22,11 @@ vi.mock('../services/rotationService.js', () => ({
   updateRotation: vi.fn(),
 }))
 
-import { updateResource, deleteResource } from '../services/resourceService.js'
-import { updateRotation } from '../services/rotationService.js'
-import { updateActivity, deleteActivity } from '../services/activityService.js'
+import { updateResource, deleteResource, getResourcesForGroup, createResource } from '../services/resourceService.js'
+import { getRotationParticipants, advanceIfDue, updateRotation } from '../services/rotationService.js'
+import { getCompletedOneOffTaskIds } from '../services/oneOffTaskService.js'
+import { getReservationsForResource } from '../services/reservationService.js'
+import { updateActivity, deleteActivity, loadActivities, createOneOffTask } from '../services/activityService.js'
 
 const activity = {
   id: 5,
@@ -31,6 +40,10 @@ beforeEach(() => {
   updateResource.mockReset()
   deleteResource.mockReset()
   updateRotation.mockReset()
+  getResourcesForGroup.mockReset()
+  createResource.mockReset()
+  getCompletedOneOffTaskIds.mockReset()
+  getReservationsForResource.mockReset()
 })
 
 describe('updateActivity', () => {
@@ -71,6 +84,46 @@ describe('deleteActivity', () => {
     deleteResource.mockResolvedValue([])
 
     expect(await deleteActivity(5)).toBe(true)
+  })
+
+  describe('one-off tasks', () => {
+    it('creates one-off tasks as group resources without rotation members', async () => {
+      const resource = { id: 8, name: 'Wipe counters', sharing_method: 'One-off' }
+      createResource.mockResolvedValue(resource)
+
+      await expect(createOneOffTask({
+        name: 'Wipe counters',
+        description: 'Kitchen',
+        groupId: 3,
+      })).resolves.toEqual(resource)
+      expect(createResource).toHaveBeenCalledWith('Wipe counters', 'Kitchen', 'One-off', 3)
+    })
+
+    it('hides completed one-off tasks while loading group activities', async () => {
+      getResourcesForGroup.mockResolvedValue([
+        { id: 8, name: 'Wipe counters', sharing_method: 'One-off' },
+        { id: 9, name: 'Wash dishes', sharing_method: 'One-off' },
+        { id: 10, name: 'Take out trash', sharing_method: 'Rotation' },
+      ])
+      getCompletedOneOffTaskIds.mockResolvedValue([8])
+      getRotationParticipants.mockResolvedValue([])
+      advanceIfDue.mockResolvedValue(null)
+
+      const activities = await loadActivities(3, 4)
+
+      expect(activities.map(item => item.id).sort((a, b) => a - b)).toEqual([9, 10])
+      expect(getCompletedOneOffTaskIds).toHaveBeenCalledWith([8, 9])
+      expect(getRotationParticipants).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show potentially completed tasks if completion status cannot be loaded', async () => {
+      getResourcesForGroup.mockResolvedValue([
+        { id: 8, name: 'Wipe counters', sharing_method: 'One-off' },
+      ])
+      getCompletedOneOffTaskIds.mockResolvedValue(null)
+
+      await expect(loadActivities(3, 4)).resolves.toBeNull()
+    })
   })
 
   it('reports failure only when the delete actually failed', async () => {

@@ -29,8 +29,9 @@ vi.mock('../services/groupService.js', () => ({
 }))
 vi.mock('../services/reservationService.js', () => ({
   createReservation: vi.fn(),
-  subscribeToReservationChanges: vi.fn(() => () => {}),
+  subscribeToGroupActivityChanges: vi.fn(() => () => {}),
 }))
+vi.mock('../services/oneOffTaskService.js', () => ({ completeOneOffTask: vi.fn() }))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
   updateCurrentParticipantName: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(() => Promise.resolve(globalThis.__activities)),
   createRotatingActivity: vi.fn(),
   createReservationActivity: vi.fn(),
+  createOneOffTask: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
 }))

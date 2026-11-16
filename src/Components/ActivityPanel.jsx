@@ -1,6 +1,7 @@
 import { Search, Check, Calendar, Settings, Lock, ClipboardList, KeyRound, ArrowUpDown } from 'lucide-react'
 import {
   isRotation,
+  isOneOffTask,
   formatFrequency,
   formatDue,
   formatClock,
@@ -14,6 +15,7 @@ import TurnOrder from './TurnOrder.jsx'
 
 function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onReserve, onEdit, onReorder }) {
   const rotating = isRotation(activity)
+  const oneOff = isOneOffTask(activity)
   const rotation = activity.rotation
   const isMyTurn = rotating && rotation?.current_participant_id === meId
   const due = formatDue(rotation?.next_rotation_at)
@@ -26,14 +28,14 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
   return (
     <li className={`activity-row${isMyTurn ? ' my-turn' : ''}`}>
         <div className="col-check">
-          {rotating && rotation && (
+          {(oneOff || (rotating && rotation)) && (
           <button
             type="button"
-            className={`check-btn${isMyTurn ? '' : ' not-yours'}`}
+            className={`check-btn${rotating && !isMyTurn ? ' not-yours' : ''}`}
             onClick={() => onMarkDone(activity)}
-            disabled={busy || !isMyTurn}  //removing !isMyTurn probably disables locked turn completion
+            disabled={busy || (rotating && !isMyTurn)}
             aria-label={`Mark ${activity.name} done`}
-            title={isMyTurn ? 'Mark done' : 'Only the person whose turn it is can mark this done'}
+            title={oneOff ? 'Mark task done' : isMyTurn ? 'Mark done' : 'Only the person whose turn it is can mark this done'}
           >
           <Check size={14} aria-hidden="true" />
           </button>
@@ -49,6 +51,8 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
               {due ? `Due ${due}` : 'No due date'}
               {isMyTurn && <span className="tag-turn">Your turn</span>}
             </>
+          ) : oneOff ? (
+            <span className="available">One-off task</span>
           ) : (
             inUse ? (
               <span className="in-use">In use until {formatClock(new Date(inUse.ends_at))}</span>
@@ -60,8 +64,8 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
       </div>
 
       <div className="col-type">
-        <span className={`badge ${rotating ? 'badge-rotation' : 'badge-reservation'}`}>
-          {rotating ? 'Rotation' : 'Reservation'}
+        <span className={`badge ${rotating ? 'badge-rotation' : oneOff ? 'badge-task' : 'badge-reservation'}`}>
+          {rotating ? 'Rotation' : oneOff ? 'One-off task' : 'Reservation'}
         </span>
       </div>
 
@@ -83,6 +87,8 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
               </button>
             )}
           </div>
+        ) : oneOff ? (
+          <span className="available">Mark done to remove for everyone</span>
         ) : (
           <div className="reservation-column">
             {(activity.reservations || []).length > 0 ? (
@@ -118,7 +124,7 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
 
       <div className="col-freq">
         <span className="badge badge-plain">
-          {rotating ? formatFrequency(rotation?.frequency_value, rotation?.frequency_unit) || '—' : 'When needed'}
+          {rotating ? formatFrequency(rotation?.frequency_value, rotation?.frequency_unit) || '—' : oneOff ? 'One time' : 'When needed'}
         </span>
       </div>
 

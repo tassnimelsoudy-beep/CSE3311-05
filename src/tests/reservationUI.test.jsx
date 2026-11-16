@@ -5,6 +5,33 @@ import AddResourceModal from '../Components/AddResourceModal.jsx'
 import { formatReservationWindow } from '../utils/activity.js'
 
 describe('reservation screens', () => {
+  it('creates a one-off task without asking for rotation settings', async () => {
+    const onCreate = vi.fn().mockResolvedValue(null)
+    render(
+      <AddResourceModal
+        household={[]}
+        meId={1}
+        groupId={3}
+        onClose={vi.fn()}
+        onCreate={onCreate}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Wipe counters' } })
+    fireEvent.click(screen.getByRole('button', { name: 'One-off task' }))
+
+    expect(screen.queryByLabelText('Repeats every')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add activity' }))
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Wipe counters',
+        sharingMethod: 'One-off',
+        groupId: 3,
+      }))
+    })
+  })
+
   it('creates a reservation resource without rotation settings', async () => {
     const onCreate = vi.fn().mockResolvedValue(null)
     render(
@@ -69,5 +96,33 @@ describe('reservation screens', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }))
     expect(onReserve).toHaveBeenCalledWith(activity)
+  })
+
+  it('shows a one-off task with a mark-done action', () => {
+    const onMarkDone = vi.fn()
+    const task = {
+      id: 8,
+      name: 'Wipe counters',
+      sharing_method: 'One-off',
+      members: [],
+    }
+
+    render(
+      <ActivityPanel
+        activities={[task]}
+        meId={1}
+        search=""
+        onSearch={vi.fn()}
+        busyId={null}
+        reservationBusyId={null}
+        onMarkDone={onMarkDone}
+        onReserve={vi.fn()}
+        onEdit={vi.fn()}
+      />
+    )
+
+    expect(screen.getAllByText('One-off task')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark Wipe counters done' }))
+    expect(onMarkDone).toHaveBeenCalledWith(task)
   })
 })
