@@ -3,17 +3,54 @@ import { supabase } from '../lib/supabase.js'
 const ONLY_HOLDER_CAN_ADVANCE = true //this and activity panel control who can advance turn
 
 
+// Turns a date picked in the creation form ("2026-11-20") into the moment the
+// first turn hands over. The whole of that day still belongs to the first
+// person, so the turn ends as the day does: formatDue compares whole days, and
+// an earlier time would advance the rotation at midnight while the card still
+// read "Today". Returns null for a blank or malformed date, so callers fall
+// back to the normal frequency.
+function startDateToFirstHandoff(dateInput)
+{
+    if (!dateInput) {
+        return null
+    }
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateInput).trim())
+    if (!match) {
+        return null
+    }
+
+    const year = Number(match[1])
+    const month = Number(match[2])
+    const day = Number(match[3])
+
+    // Built from parts rather than parsed, because new Date("2026-11-20")
+    // reads as UTC midnight and would land on the previous day west of GMT.
+    const date = new Date(year, month - 1, day, 23, 59, 59, 999)
+
+    // Rejects dates that don't exist (Feb 30 rolls into March).
+    if (Number.isNaN(date.getTime()) || date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return null
+    }
+
+    return date.toISOString()
+}
+
 // Creates a rotation schedule for a resource (e.g. every 1 "week").
-// Sets the current person to the first in the turn order and
-// next_rotation_at to now + the frequency.
+// Sets the current person to the first in the turn order. next_rotation_at
+// becomes the given start date (the first handoff) when one is supplied,
+// and now + the frequency otherwise.
 // Returns the new rotation object, or null on failure.
-async function createRotation(resourceId, frequencyValue, frequencyUnit)
+async function createRotation(resourceId, frequencyValue, frequencyUnit, startDate = null)
 {
         try {
 
             const participants = await getRotationParticipants(resourceId)
             const current = getFirstParticipant(participants)
-            const dueDate = nextRotationDate(frequencyValue, frequencyUnit)
+            // An explicit start date is the first handoff; otherwise the
+            // first turn runs one full period from now.
+            const dueDate = startDateToFirstHandoff(startDate)
+                || nextRotationDate(frequencyValue, frequencyUnit)
 
             if (!dueDate) {
             console.error("invalid frequency unit")
@@ -159,6 +196,59 @@ async function updateParticipantPosition(resourceId, participantId, position)
         console.error("Error updating position data: ", error.message)
         return null
     }
+}
+
+// Rewrites a rotation's turn order and hands the current turn to whoever is
+// now first. The due date is deliberately untouched: reordering decides who is
+// on duty, not how long the period lasts.
+//
+// Positions are unique per resource, so the new order can't be written straight
+// over the old one - the first write would collide with whoever still holds
+// that slot. Everyone is parked above the highest position in use first, then
+// written down into 1..n. Parking above rather than below keeps the values
+// positive, in case the column only allows that, and the parked values ascend
+// in the new order, so a failure between the two passes leaves the rotation in
+// the intended order rather than a scrambled one.
+//
+// Returns the updated rotation, or null if any write fails.
+async function reorderRotation(resourceId, orderedParticipantIds)
+{
+    if (!resourceId || !Array.isArray(orderedParticipantIds) || orderedParticipantIds.length === 0) {
+        console.error("Nothing to reorder")
+        return null
+    }
+
+    const existing = await getRotationParticipants(resourceId)
+    if (!existing) {
+        return null
+    }
+
+    const count = orderedParticipantIds.length
+    const highest = existing.reduce((max, member) => Math.max(max, member.position || 0), 0)
+    const parkFrom = Math.max(highest, count) + 1
+
+    for (let index = 0; index < count; index++) {
+        const parked = await updateParticipantPosition(resourceId, orderedParticipantIds[index], parkFrom + index)
+        if (!parked) {
+            console.error("Could not park turn positions")
+            return null
+        }
+    }
+
+    for (let index = 0; index < count; index++) {
+        const placed = await updateParticipantPosition(resourceId, orderedParticipantIds[index], index + 1)
+        if (!placed) {
+            console.error("Could not write the new turn order")
+            return null
+        }
+    }
+
+    const rotation = await getRotation(resourceId)
+    if (!rotation) {
+        return null
+    }
+
+    return updateRotation(rotation.id, { current_participant_id: orderedParticipantIds[0] })
 }
 
 // Finds the next participant in a rotation
@@ -307,12 +397,14 @@ export {
     updateRotation,
     getRotationParticipants,
     updateParticipantPosition,
+    reorderRotation,
     getNextParticipant,
     getFirstParticipant,
     getNextParticipantForResource,
     advanceIfDue,
     advanceTurn,
     nextRotationDate,
+    startDateToFirstHandoff,
     followingDueDate,
     completeTurn
 }

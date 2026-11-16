@@ -1,4 +1,4 @@
-import { Search, Check, Calendar, Settings, Lock, ClipboardList, KeyRound } from 'lucide-react'
+import { Search, Check, Calendar, Settings, Lock, ClipboardList, KeyRound, ArrowUpDown } from 'lucide-react'
 import {
   isRotation,
   formatFrequency,
@@ -12,7 +12,7 @@ import {
 } from '../utils/activity.js'
 import TurnOrder from './TurnOrder.jsx'
 
-function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onReserve, onEdit }) {
+function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onReserve, onEdit, onReorder }) {
   const rotating = isRotation(activity)
   const rotation = activity.rotation
   const isMyTurn = rotating && rotation?.current_participant_id === meId
@@ -67,7 +67,22 @@ function ActivityRow({ activity, meId, busy, reservationBusy, onMarkDone, onRese
 
       <div className="col-order">
         {rotating ? (
-          <TurnOrder members={activity.members} currentId={rotation?.current_participant_id} meId={meId} />
+          <div className="turn-order-row">
+            <TurnOrder members={activity.members} currentId={rotation?.current_participant_id} meId={meId} />
+            {(activity.members || []).length > 1 && (
+              // Sits at the end of the turn chain rather than reading as its
+              // own control, so the sequence itself looks rearrangeable.
+              <button
+                type="button"
+                className="turn-reorder"
+                onClick={() => onReorder(activity)}
+                aria-label={`Reorder turns for ${activity.name}`}
+                title="Reorder turns"
+              >
+                <ArrowUpDown size={15} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         ) : (
           <div className="reservation-column">
             {(activity.reservations || []).length > 0 ? (
@@ -139,6 +154,7 @@ export default function ActivityPanel({
   onMarkDone,
   onReserve,
   onEdit,
+  onReorder,
 }) {
   const loading = activities === null
   const query = search.trim().toLowerCase()
@@ -206,6 +222,7 @@ export default function ActivityPanel({
                 onMarkDone={onMarkDone}
                 onReserve={onReserve}
                 onEdit={onEdit}
+                onReorder={onReorder}
               />
             ))}
           </ul>
