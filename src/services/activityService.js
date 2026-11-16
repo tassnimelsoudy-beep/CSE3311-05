@@ -47,7 +47,7 @@ async function loadActivities(participantId, groupId)
 // (first id goes first), and the rotation schedule. The activity belongs to
 // groupId, and createResource records the logged-in participant as its owner.
 // Returns the new resource, or null if any step failed.
-async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, groupId })
+async function createRotatingActivity({ name, description, frequencyValue, frequencyUnit, memberIds, groupId, startDate })
 {
 
     if (!groupId) {
@@ -64,7 +64,7 @@ async function createRotatingActivity({ name, description, frequencyValue, frequ
         return null
     }
 
-    const rotation = await createRotation(resource.id, frequencyValue, frequencyUnit)
+    const rotation = await createRotation(resource.id, frequencyValue, frequencyUnit, startDate)
     return rotation ? resource : null
 }
 

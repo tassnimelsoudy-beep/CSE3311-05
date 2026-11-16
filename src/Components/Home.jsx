@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { updateAccount } from '../services/authService.js'
 import { getCurrentParticipant, updateCurrentParticipantName } from '../services/participantService.js'
-import { completeTurn } from '../services/rotationService.js'
+import { completeTurn, reorderRotation, getRotationParticipants } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
 import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
 import { createReservation, subscribeToReservationChanges } from '../services/reservationService.js'
@@ -17,6 +17,7 @@ import NoGroupPrompt from './NoGroupPrompt.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
 import ActivityDialogs from './ActivityDialogs.jsx'
 import ReservationModal from './ReservationModal.jsx'
+import ReorderTurnsModal from './ReorderTurnsModal.jsx'
 import AddGroupModal from "./AddGroupModal"
 import ManageGroupMembersModal from './ManageGroupMembersModal.jsx'
 import Toast from './Toast.jsx'
@@ -32,6 +33,7 @@ export default function Home({ user }) {
   const [busyId, setBusyId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [reserving, setReserving] = useState(null)
+  const [reordering, setReordering] = useState(null)
   const [reservationBusyId, setReservationBusyId] = useState(null)
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [showManageMembers, setShowManageMembers] = useState(false)
@@ -267,6 +269,38 @@ export default function Home({ user }) {
   }
 
 
+// Saves a new turn order. Anyone in the group may do this; whoever ends up
+// first takes over the turn in progress, which is why the members list is
+// re-read rather than reordered locally - the server is the source of truth
+// for both the positions and the new holder.
+async function handleReorder(orderedIds) {
+  const activity = reordering
+  if (!activity) return 'Nothing to reorder.'
+
+  const updated = await reorderRotation(activity.id, orderedIds)
+  if (!updated) {
+    return `Couldn\u2019t save the new order for ${activity.name}. Try again.`
+  }
+
+  const members = await getRotationParticipants(activity.id)
+
+  setActivities(list =>
+    list.map(item =>
+      item.id === activity.id
+        ? { ...item, rotation: updated, members: members || item.members }
+        : item,
+    ),
+  )
+
+  const holder = (members || activity.members).find(
+    member => member.id === updated.current_participant_id,
+  )
+  const who = !holder ? 'Someone new is' : holder.id === meId ? 'You\u2019re' : `${holder.name.split(' ')[0]} is`
+  setReordering(null)
+  showToast(`Reordered ${activity.name}. ${who} up now.`)
+  return null
+}
+
 async function handleMarkDone(activity) {
   // Only the person whose turn it is can pass it on
   if (activity.rotation?.current_participant_id !== meId) {
@@ -406,6 +440,7 @@ async function handleMarkDone(activity) {
               onMarkDone={handleMarkDone}
               onEdit={editor.start}
               onReserve={setReserving}
+              onReorder={setReordering}
             />
             <NextUpBar
               nextUp={getNextUp(activities || [])}
@@ -440,6 +475,15 @@ async function handleMarkDone(activity) {
           resource={reserving}
           onClose={() => setReserving(null)}
           onReserve={handleReserve}
+        />
+      )}
+
+      {reordering && (
+        <ReorderTurnsModal
+          members={reordering.members || []}
+          meId={meId}
+          onClose={() => setReordering(null)}
+          onSave={handleReorder}
         />
       )}
 

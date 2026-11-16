@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import Avatar from './Avatar.jsx'
+import AddPersonMenu from './AddPersonMenu.jsx'
+import SortableMemberList from './SortableMemberList.jsx'
 import Modal from './Modal.jsx'
 
 // Repeat units offered in the form (must match rotationService.nextRotationDate).
@@ -25,18 +26,26 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
   const [sharingMethod, setSharingMethod] = useState('Rotation')
   const [frequencyValue, setFrequencyValue] = useState('1')
   const [frequencyUnit, setFrequencyUnit] = useState('week')
+  const [startDate, setStartDate] = useState('') // blank = first turn starts now
   const [selectedIds, setSelectedIds] = useState(meId ? [meId] : []) // array keeps turn order
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  function toggleSelect(id) {
-    setSelectedIds(ids => (ids.includes(id) ? ids.filter(other => other !== id) : [...ids, id]))
+  // Local YYYY-MM-DD, so the picker can't offer a date already gone.
+  // toISOString() would be wrong here: it shifts to UTC.
+  function todayInputValue() {
+    const now = new Date()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${now.getFullYear()}-${month}-${day}`
   }
 
-  function labelFor(id) {
-    if (id === meId) return 'You'
-    const person = household.find(member => member.id === id)
-    return person ? person.name.split(' ')[0] : ''
+  function addPerson(id) {
+    setSelectedIds(ids => (ids.includes(id) ? ids : [...ids, id]))
+  }
+
+  function removePerson(id) {
+    setSelectedIds(ids => ids.filter(other => other !== id))
   }
 
   async function handleSubmit(e) {
@@ -56,6 +65,10 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
       setError('Choose at least one person to take turns.')
       return
     }
+    if (sharingMethod === 'Rotation' && startDate && startDate < todayInputValue()) {
+      setError('The first handoff can\u2019t be in the past.')
+      return
+    }
 
     setLoading(true)
     const failure = await onCreate({
@@ -64,6 +77,7 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
       sharingMethod,
       frequencyValue: every,
       frequencyUnit,
+      startDate: startDate || null,
       memberIds: selectedIds,
       groupId
     })
@@ -146,25 +160,56 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
             </div>
           </div>
 
-          <fieldset className="field member-picker">
-            <legend className="field-label">Who takes turns</legend>
-            {household && household.length > 0 ? (
-              household.map(p => (
-                <label key={p.id} className="member-option">
-                  <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} />
-                  <Avatar name={p.name} size={28} />
-                  <span>{p.isYou ? `${p.name} (you)` : p.name}</span>
-                </label>
-              ))
-            ) : (
-              <div className="hint">No participants available</div>
-            )}
-            <p className="hint">
-              {selectedIds.length > 0
-                ? `Turn order: ${selectedIds.map(labelFor).join(', then ')}.`
-                : 'People take turns in the order you tick them.'}
+          <div className="field">
+            <label htmlFor="activity-start">Starts on (optional)</label>
+            <input
+              id="activity-start"
+              type="date"
+              className={startDate ? undefined : 'input-optional-empty'}
+              min={todayInputValue()}
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              aria-describedby="activity-start-hint"
+            />
+            <p id="activity-start-hint" className="hint">
+              The first turn runs until this date, then passes to the next person.
+              Leave blank to start a full turn now.
             </p>
-          </fieldset>
+          </div>
+
+          <div className="field">
+            <span className="field-label">Turn order</span>
+            <p className="hint reorder-intro">
+              {selectedIds.length > 1
+                ? 'Whoever is at the top takes the first turn. Drag to rearrange, or focus a row and press space, then the arrow keys.'
+                : 'Add everyone who takes a turn. The order you put them in is the order they go in.'}
+            </p>
+
+            {selectedIds.length > 0 ? (
+              <SortableMemberList
+                members={household}
+                order={selectedIds}
+                onOrderChange={setSelectedIds}
+                onRemove={removePerson}
+                meId={meId}
+                firstTag={selectedIds.length > 1 ? 'Goes first' : null}
+                ariaLabel="Turn order"
+              />
+            ) : (
+              <p className="empty-turn-order">Nobody is taking turns yet.</p>
+            )}
+
+            {household && household.length > 0 ? (
+              <AddPersonMenu
+                candidates={household.filter(person => !selectedIds.includes(person.id))}
+                meId={meId}
+                onAdd={addPerson}
+              />
+            ) : (
+              <p className="hint">No participants available</p>
+            )}
+          </div>
+
           </>
         )}
 
