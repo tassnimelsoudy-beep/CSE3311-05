@@ -1,16 +1,21 @@
 import { supabase } from '../lib/supabase.js'
 
-function subscribeToReservationChanges(onInsert) {
+function subscribeToGroupActivityChanges(onChange) {
   const channel = supabase
-    .channel('reservation-updates')
+    .channel('group-activity-updates')
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'reservations' },
-      onInsert
+      onChange
+    )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'one_off_task_completions' },
+      onChange
     )
     .subscribe(status => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.error(`Reservation subscription failed: ${status}`)
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        console.error(`Group activity subscription failed: ${status}`)
       }
     })
 
@@ -114,4 +119,4 @@ async function createReservation({ resourceId, participantId, startsAt, endsAt }
 
 
 
-export { createReservation, getReservationsForResource, subscribeToReservationChanges }
+export { createReservation, getReservationsForResource, subscribeToGroupActivityChanges }

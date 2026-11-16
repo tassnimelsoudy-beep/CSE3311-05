@@ -9,6 +9,11 @@ function isRotation(activity)
     return (activity?.sharing_method || '').toLowerCase() === 'rotation'
 }
 
+function isOneOffTask(activity)
+{
+    return (activity?.sharing_method || '').toLowerCase() === 'one-off'
+}
+
 // (1, "week") -> "Weekly", (2, "week") -> "Every 2 weeks"
 function formatFrequency(value, unit)
 {
@@ -226,6 +231,7 @@ function sortActivities(activities)
 
 export {
     isRotation,
+    isOneOffTask,
     formatClock,
     formatDayLabel,
     formatReservationWindow,

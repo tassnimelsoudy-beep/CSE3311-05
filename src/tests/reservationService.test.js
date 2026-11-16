@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase.js'
 import {
   createReservation,
   getReservationsForResource,
-  subscribeToReservationChanges,
+  subscribeToGroupActivityChanges,
 } from '../services/reservationService.js'
 
 beforeEach(() => {
@@ -138,8 +138,8 @@ describe('getReservationsForResource', () => {
   })
 })
 
-describe('subscribeToReservationChanges', () => {
-  it('subscribes to reservation inserts and removes the channel on cleanup', () => {
+describe('subscribeToGroupActivityChanges', () => {
+  it('subscribes to reservation and task completion inserts and removes the channel', () => {
     const channel = {
       on: vi.fn(),
       subscribe: vi.fn(),
@@ -149,12 +149,17 @@ describe('subscribeToReservationChanges', () => {
     supabase.channel = vi.fn(() => channel)
     supabase.removeChannel = vi.fn()
     const onInsert = vi.fn()
-    const unsubscribe = subscribeToReservationChanges(onInsert)
+    const unsubscribe = subscribeToGroupActivityChanges(onInsert)
 
-    expect(supabase.channel).toHaveBeenCalledWith('reservation-updates')
-    expect(channel.on).toHaveBeenCalledWith(
+    expect(supabase.channel).toHaveBeenCalledWith('group-activity-updates')
+    expect(channel.on).toHaveBeenNthCalledWith(1,
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'reservations' },
+      onInsert
+    )
+    expect(channel.on).toHaveBeenNthCalledWith(2,
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'one_off_task_completions' },
       onInsert
     )
     expect(channel.subscribe).toHaveBeenCalled()

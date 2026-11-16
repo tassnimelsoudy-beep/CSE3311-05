@@ -466,6 +466,11 @@
   color: #8a5d05;
 }
 
+.badge-task {
+  background: #e7f2eb;
+  color: #28603d;
+}
+
 .badge-plain {
   background: var(--bg);
   color: var(--ink-soft);

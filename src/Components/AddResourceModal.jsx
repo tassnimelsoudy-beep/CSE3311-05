@@ -10,7 +10,7 @@ const UNITS = [
   { value: 'month', label: 'months' },
 ]
 
-// Form for adding a shared resource, either as a rotation or a reservation.
+// Form for adding a rotation, reservable resource, or one-off task.
 //
 // - household: people who can be added ({ id, name, isYou }). Passed in rather
 //   than fetched with getAllParticipants, because that would list every
@@ -118,11 +118,12 @@ export default function AddResourceModal({ household, meId, groupId, onClose, on
         </div>
 
         <div className="field">
-          <span className="field-label">How it’s shared</span>
+          <span className="field-label">Activity type</span>
           <div className="choice-row">
           {[
             { value: 'Rotation', label: 'Take turns' },
             { value: 'Reservation', label: 'Reserve it' },
+            { value: 'One-off', label: 'One-off task' },
           ].map(option => (
             <button
               key={option.value}

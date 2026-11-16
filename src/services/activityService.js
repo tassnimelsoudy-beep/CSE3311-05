@@ -6,6 +6,7 @@ import { getResourcesForGroup, createResource, addResourceMembers, updateResourc
 import { getRotationParticipants, advanceIfDue, createRotation, updateRotation } from './rotationService.js'
 import { isRotation, sortActivities } from '../utils/activity.js'
 import { getReservationsForResource } from './reservationService.js'
+import { getCompletedOneOffTaskIds } from './oneOffTaskService.js'
 
 // Loads the activities to show on the dashboard. Overdue turns are passed on
 // first (advanceIfDue), so it always shows whose turn it is now.
@@ -24,12 +25,27 @@ async function loadActivities(participantId, groupId)
         return null
     }
 
+    const availableResources = resources.filter(Boolean)
+    const taskIds = availableResources
+        .filter(resource => (resource.sharing_method || '').toLowerCase() === 'one-off')
+        .map(resource => resource.id)
+    const completedTaskIds = await getCompletedOneOffTaskIds(taskIds)
+    if (!completedTaskIds) {
+        return null
+    }
+
+    const completedTasks = new Set(completedTaskIds)
+    const visibleResources = availableResources.filter(resource =>
+        !completedTasks.has(resource.id)
+    )
+
     const activities = await Promise.all(
-        resources.filter(Boolean).map(async resource => {
+        visibleResources.map(async resource => {
             const rotating = isRotation(resource)
             const members = rotating ? (await getRotationParticipants(resource.id)) || [] : []
             const rotation = rotating ? await advanceIfDue(resource.id) : null
-            const reservations = rotating ? [] : await getReservationsForResource(resource.id)
+            const reservable = (resource.sharing_method || '').toLowerCase() === 'reservation'
+            const reservations = reservable ? await getReservationsForResource(resource.id) : []
             return { ...resource, members, rotation, reservations: reservations || [] }
         })
     )
@@ -119,11 +135,19 @@ async function createReservationActivity({ name, description, groupId }) {
     return createResource(name, description || null, 'Reservation', groupId)
 }
 
+async function createOneOffTask({ name, description, groupId }) {
+    if (!groupId) {
+        return null
+    }
+
+    return createResource(name, description || null, 'One-off', groupId)
+}
+
 export {
     loadActivities,
     createRotatingActivity,
     createReservationActivity,
+    createOneOffTask,
     updateActivity,
     deleteActivity
 }
-

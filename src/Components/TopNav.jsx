@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Home as HouseIcon, ChevronDown, Bell, LogOut, UserRound } from 'lucide-react'
+import { Bell, LogOut, UserRound } from 'lucide-react'
 import { logout } from '../services/authService.js'
 import {
   getNotifications,
@@ -13,7 +13,7 @@ import { useInvites } from '../hooks/useInvites.js'
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
-export default function TopNav({ name, onComingSoon, groups, onCreateGroup, selectedGroup, onSelectGroup, participantId, onGroupsChanged,  onEditProfile }) {
+export default function TopNav({ name, groups, onCreateGroup, selectedGroup, onSelectGroup, participantId, onGroupsChanged, onEditProfile }) {
   const [loggingOut, setLoggingOut] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
@@ -117,81 +117,6 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
       </div>
 
       <div className="topnav-right">
-        <div className="notification-wrapper">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Notifications"
-          onClick={() => setShowNotifications(!showNotifications)}
-          >
-  <Bell size={18} aria-hidden="true" />
-{notifications.some(n => !n.is_read) && (
-  <span className="notification-dot" />
-)}
-</button>
-{showNotifications && (
-  <div className="notifications-panel">
-    
-
-<div className="notifications-header">
-      <h3>Notifications</h3>
-
-      <button
-  type="button"
-style={{
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 14px",
-  backgroundColor: "#FFF8E6",
-  color: "#594514",
-  border: "1px solid #F0DCA3",
-  borderRadius: "20px",
-  fontSize: "13px",
-  fontWeight: "600",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-}}
-
-  onClick={async () => {
-    try {
-      await subscribeToPushNotifications()
-      alert("Browser notifications enabled! 🔔")
-    } catch (error) {
-      console.error("Failed to enable push notifications:", error)
-      alert(error.message || "Could not enable notifications.")
-    }
-  }}
->
-  🔔 Enable notifications
-</button>
-
-      {notifications.some(n => !n.is_read) && (
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              await markAllNotificationsRead()
-              setNotifications(prev =>
-                prev.map(n => ({ ...n, is_read: true }))
-              )
-            } catch (error) {
-              console.error('Failed to mark notifications as read:', error)
-            }
-          }}
-        >
-          Mark all as read
-        </button>
-      )}
-    </div>
-
-    {loadingNotifications ? (
-      <p>Loading notifications...</p>
-    ) : notifications.length === 0 ? (
-      <p>No notifications yet 🔔</p>
-    ) : (
-      <div className="notifications-list">
-        {notifications.map(notification => (
         <div className="notification-wrapper" ref={wrapperRef}>
           <button
             type="button"
@@ -212,7 +137,20 @@ style={{
             <div className="notifications-panel">
               <div className="notifications-header">
                 <h3>Notifications</h3>
-
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await subscribeToPushNotifications()
+                      alert('Browser notifications enabled!')
+                    } catch (error) {
+                      console.error('Failed to enable notifications:', error)
+                      alert(error.message || 'Could not enable notifications.')
+                    }
+                  }}
+                >
+                  Enable notifications
+                </button>
                 {notifications.some(n => !n.is_read) && (
                   <button
                     type="button"
@@ -232,7 +170,6 @@ style={{
                 )}
               </div>
 
-              {/* Pending group invites */}
               {invites.length > 0 && (
                 <div className="invite-section">
                   <h4>Group invites</h4>
@@ -251,11 +188,10 @@ style={{
                 </div>
               )}
 
-              {/* Regular notifications (deadline reminders, etc.) */}
               {loadingNotifications ? (
                 <p>Loading notifications...</p>
               ) : notifications.length === 0 ? (
-                invites.length === 0 && <p>No notifications yet 🔔</p>
+                invites.length === 0 && <p>No notifications yet ??</p>
               ) : (
                 <div className="notifications-list">
                   {notifications.map(notification => (
@@ -267,7 +203,6 @@ style={{
                       }`}
                       onClick={async () => {
                         if (notification.is_read) return
-
                         try {
                           await markNotificationRead(notification.id)
                           setNotifications(prev =>
@@ -295,13 +230,16 @@ style={{
           )}
         </div>
 
-        <div className="profile">
-        <button type="button" className="profile profile-button" onClick={onEditProfile} aria-label="Edit profile">
+        <button
+          type="button"
+          className="profile profile-button"
+          onClick={onEditProfile}
+          aria-label="Edit profile"
+        >
           <Avatar name={name} size={32} />
           <span className="profile-name">{name}</span>
           <UserRound size={15} aria-hidden="true" />
         </button>
-        </div>
         <button
           type="button"
           className="btn-ghost"
@@ -310,7 +248,7 @@ style={{
           aria-label="Log out"
         >
           <LogOut size={16} aria-hidden="true" />
-          <span>{loggingOut ? 'Logging out…' : 'Log out'}</span>
+          <span>{loggingOut ? 'Logging out?' : 'Log out'}</span>
         </button>
       </div>
     </header>
