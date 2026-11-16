@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 vi.mock('../services/authService.js', () => ({
   login: vi.fn(),
   signUp: vi.fn(),
+  updateAccount: vi.fn(),
   logout: vi.fn(),
   onAuthChange: vi.fn(),
 }))
@@ -18,18 +19,25 @@ vi.mock('../services/groupService.js', () => ({
       { id: 2, name: 'Alex Chen' },
     ])
   ),
+  getPendingInvites: vi.fn(() => Promise.resolve([])),
+  acceptGroupInvite: vi.fn(),
+  declineGroupInvite: vi.fn(),
 }))
-vi.mock('../services/reservationService.js', () => ({ createReservation: vi.fn() }))
+vi.mock('../services/reservationService.js', () => ({
+  createReservation: vi.fn(),
+  subscribeToReservationChanges: vi.fn(() => () => {}),
+}))
 vi.mock('../services/participantService.js', () => ({
   getCurrentParticipant: vi.fn(() => Promise.resolve({ id: 1, name: 'Sarah Miller' })),
+  updateCurrentParticipantName: vi.fn(),
 }))
-vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
+vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(),
   createRotatingActivity: vi.fn(),
   createReservationActivity: vi.fn(),
 }))
-vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn() }))
+vi.mock('../services/rotationService.js', () => ({ advanceTurn: vi.fn(), completeTurn: vi.fn() }))
 vi.mock('../services/activityService.js', () => ({
   loadActivities: vi.fn(() =>
     Promise.resolve([
@@ -58,8 +66,9 @@ vi.mock('../services/activityService.js', () => ({
   deleteActivity: vi.fn(),
 }))
 
-import { signUp, onAuthChange } from '../services/authService.js'
-import { advanceTurn } from '../services/rotationService.js'
+import { signUp, onAuthChange, updateAccount } from '../services/authService.js'
+import { updateCurrentParticipantName } from '../services/participantService.js'
+import { completeTurn } from '../services/rotationService.js'
 import AuthScreen from '../Components/AuthScreen.jsx'
 import App from '../App.jsx'
 
@@ -108,6 +117,43 @@ function logInAsSarah() {
 }
 
 describe('Home dashboard', () => {
+  it('lets a user update their name and syncs it to the group participant', async () => {
+    logInAsSarah()
+    updateAccount.mockResolvedValue({
+      data: {
+        user: {
+          id: 'u1',
+          email: 'sarah@example.com',
+          user_metadata: { name: 'Taylor Swift' },
+        },
+      },
+      error: null,
+    })
+    updateCurrentParticipantName.mockResolvedValue({
+      id: 1,
+      name: 'Taylor Swift',
+      user_id: 'u1',
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Edit profile' }))
+    await user.clear(screen.getByLabelText('Display name'))
+    await user.type(screen.getByLabelText('Display name'), 'Taylor Swift')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByRole('heading', { name: 'Hi, Taylor' })).toBeInTheDocument()
+    expect(updateAccount).toHaveBeenCalledWith({
+      name: 'Taylor Swift',
+      email: '',
+      password: '',
+      currentPassword: '',
+      userId: 'u1',
+    })
+    expect(updateCurrentParticipantName).toHaveBeenCalledWith(1, 'u1', 'Taylor Swift')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it("lists the household's activities and flags the user's own turn", async () => {
     logInAsSarah()
     render(<App />)
@@ -120,7 +166,7 @@ describe('Home dashboard', () => {
 
   it('passes the turn to the next person when marked done', async () => {
     logInAsSarah()
-    advanceTurn.mockResolvedValue({
+    completeTurn.mockResolvedValue({
       id: 70,
       current_participant_id: 2,
       frequency_value: 1,
@@ -132,7 +178,7 @@ describe('Home dashboard', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Mark Take out the trash done' }))
 
-    expect(advanceTurn).toHaveBeenCalledWith(7)
+    expect(completeTurn).toHaveBeenCalledWith(7, 1)
     expect(await screen.findByText('Marked Take out the trash done. Alex is up next.')).toBeInTheDocument()
     expect(screen.queryByText('Your turn')).not.toBeInTheDocument()
   })

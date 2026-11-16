@@ -1,17 +1,57 @@
 import { supabase } from '../lib/supabase.js'
 
+function subscribeToReservationChanges(onInsert) {
+  const channel = supabase
+    .channel('reservation-updates')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'reservations' },
+      onInsert
+    )
+    .subscribe(status => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error(`Reservation subscription failed: ${status}`)
+      }
+    })
+
+  return () => {
+    void supabase.removeChannel(channel)
+  }
+}
+
 // Returns active and upcoming reservations for a resource, or null on failure.
 async function getReservationsForResource(resourceId) {
   try {
     const { data, error } = await supabase
       .from('reservations')
-      .select('id, resource_id, participant_id, starts_at, ends_at, participants(id, name)')
+      .select('id, resource_id, participant_id, starts_at, ends_at')
       .eq('resource_id', resourceId)
       .gte('ends_at', new Date().toISOString())
       .order('starts_at', { ascending: true })
 
     if (error) throw error
-    return data
+
+    const participantIds = [...new Set(data.map(reservation => reservation.participant_id))]
+    if (participantIds.length === 0) return data
+
+    const { data: participants, error: participantError } = await supabase
+      .from('participants')
+      .select('id, name')
+      .in('id', participantIds)
+
+    if (participantError) {
+      console.error('Error retrieving reservation participants:', participantError.message)
+      return data.map(reservation => ({ ...reservation, participants: null }))
+    }
+
+    const namesById = new Map(participants.map(participant => [participant.id, participant.name]))
+    return data.map(reservation => ({
+      ...reservation,
+      participants: {
+        id: reservation.participant_id,
+        name: namesById.get(reservation.participant_id) || null,
+      },
+    }))
   } catch (error) {
     console.error('Error retrieving reservations:', error.message)
     return null
@@ -66,4 +106,4 @@ async function createReservation({ resourceId, participantId, startsAt, endsAt }
   }
 }
 
-export { createReservation, getReservationsForResource }
+export { createReservation, getReservationsForResource, subscribeToReservationChanges }

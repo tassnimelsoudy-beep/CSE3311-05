@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getCurrentParticipant } from '../services/participantService.js'
-import { advanceTurn } from '../services/rotationService.js'
+import { updateAccount } from '../services/authService.js'
+import { getCurrentParticipant, updateCurrentParticipantName } from '../services/participantService.js'
+import { completeTurn, reorderRotation, getRotationParticipants } from '../services/rotationService.js'
 import { getGroupsForUser, getGroupMembers } from "../services/groupService";
 import { loadActivities, createRotatingActivity, createReservationActivity } from '../services/activityService.js'
-import { createReservation } from '../services/reservationService.js'
+import { createReservation, subscribeToReservationChanges } from '../services/reservationService.js'
 import { getDisplayName } from '../utils/avatar.js'
 import { getNextUp } from '../utils/activity.js'
 import { useActivityEditing } from '../hooks/useActivityEditing.js'
@@ -12,12 +13,15 @@ import ActivityPanel from './ActivityPanel.jsx'
 import NextUpBar from './NextUpBar.jsx'
 import RemindersPanel from './RemindersPanel.jsx'
 import MembersPanel from './MembersPanel.jsx'
+import NoGroupPrompt from './NoGroupPrompt.jsx'
 import AddResourceModal from './AddResourceModal.jsx'
 import ActivityDialogs from './ActivityDialogs.jsx'
 import ReservationModal from './ReservationModal.jsx'
+import ReorderTurnsModal from './ReorderTurnsModal.jsx'
 import AddGroupModal from "./AddGroupModal"
 import ManageGroupMembersModal from './ManageGroupMembersModal.jsx'
 import Toast from './Toast.jsx'
+import ProfileModal from './ProfileModal.jsx'
 import './Home.css'
 
 export default function Home({ user }) {
@@ -29,11 +33,16 @@ export default function Home({ user }) {
   const [busyId, setBusyId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [reserving, setReserving] = useState(null)
+  const [reordering, setReordering] = useState(null)
   const [reservationBusyId, setReservationBusyId] = useState(null)
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [showManageMembers, setShowManageMembers] = useState(false)
   const [groupMembers, setGroupMembers] = useState([])
+  const [groupsLoaded, setGroupsLoaded] = useState(false)
+  const [groupPromptHidden, setGroupPromptHidden] = useState(false)
   const [showReminders, setShowReminders] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const [accountUser, setAccountUser] = useState(user)
   const [toast, setToast] = useState(null)
 
 
@@ -48,6 +57,7 @@ export default function Home({ user }) {
       if (!me) {
         setGroups([])
         setSelectedGroup(null)
+        setGroupsLoaded(true)
         setToast({
           id: Date.now(),
           message: "Couldn’t load your participant profile. Please ask your project administrator to check participant setup.",
@@ -63,6 +73,7 @@ export default function Home({ user }) {
 
       const initialGroup = availableGroups[0] || null
       setSelectedGroup(initialGroup)
+      setGroupsLoaded(true)
 
       
     // Load activities for the selected group
@@ -106,6 +117,47 @@ export default function Home({ user }) {
   }, [participant, selectedGroup])
 
   useEffect(() => {
+    if (!participant || !selectedGroup) return
+
+    let active = true
+    let refreshing = false
+    async function refreshActivities() {
+      if (refreshing) return
+      refreshing = true
+      try {
+        const list = await loadActivities(participant.id, selectedGroup.id)
+        if (active && list) {
+          setActivities(list)
+        }
+      } finally {
+        refreshing = false
+      }
+    }
+
+    const unsubscribe = subscribeToReservationChanges(refreshActivities)
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshActivities()
+      }
+    }, 10_000)
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') {
+        refreshActivities()
+      }
+    }
+    window.addEventListener('focus', refreshActivities)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refreshActivities)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      unsubscribe()
+    }
+  }, [participant, selectedGroup])
+
+  useEffect(() => {
     let active = true
 
     async function fetchGroupMembers() {
@@ -129,6 +181,10 @@ export default function Home({ user }) {
     }
   }, [selectedGroup, participant])
 
+  // Only nudge once we know the answer, and stop as soon as they're in a group
+  // or have waved it off.
+  const showGroupPrompt = groupsLoaded && groups.length === 0 && !groupPromptHidden
+
   const showToast = useCallback(message => setToast({ id: Date.now(), message }), [])
   const hideToast = useCallback(() => setToast(null), [])
   const comingSoon = useCallback(feature => showToast(`${feature} will be available in a later version.`), [showToast])
@@ -139,21 +195,133 @@ export default function Home({ user }) {
   const firstName = name.split(' ')[0]
   const meId = participant?.id
 
-  async function handleMarkDone(activity) {
-    setBusyId(activity.id)
-    const updated = await advanceTurn(activity.id)
-    setBusyId(null)
-
-    if (!updated) {
-      showToast(`Couldn’t update ${activity.name}. Try again.`)
-      return
+  async function handleProfileSave({ name: nextName, email, password, currentPassword }) {
+    const changedName = nextName !== participant?.name
+    function applyParticipantName(updatedParticipant) {
+      setParticipant(updatedParticipant)
+      setGroupMembers(members => members.map(member =>
+        member.id === updatedParticipant.id ? { ...member, name: updatedParticipant.name } : member
+      ))
+      setActivities(list => (list || []).map(activity => ({
+        ...activity,
+        members: (activity.members || []).map(member =>
+          member.id === updatedParticipant.id ? { ...member, name: updatedParticipant.name } : member
+        ),
+        reservations: (activity.reservations || []).map(reservation =>
+          reservation.participant_id === updatedParticipant.id
+            ? { ...reservation, participants: { ...reservation.participants, name: updatedParticipant.name } }
+            : reservation
+        ),
+      })))
     }
-    // Update in place (no re-sort) so the row doesn't jump away from the pointer.
-    setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
-    const next = activity.members.find(member => member.id === updated.current_participant_id)
-    const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
-    showToast(`Marked ${activity.name} done. ${who} up next.`)
+
+    let updatedParticipant = participant
+    if (changedName) {
+      updatedParticipant = await updateCurrentParticipantName(participant.id, user.id, nextName)
+      if (!updatedParticipant) {
+        return {
+          error: 'Your group display name could not be saved, so no account settings were changed. Please try again or contact your administrator.',
+        }
+      }
+    }
+
+    const accountResult = await updateAccount({
+      name: changedName ? nextName : '',
+      email,
+      password,
+      currentPassword,
+      userId: user.id,
+    })
+    if (accountResult.error) {
+      if (changedName) {
+        const reverted = await updateCurrentParticipantName(participant.id, user.id, participant.name)
+        if (!reverted) {
+          applyParticipantName(updatedParticipant)
+          return {
+            error: `${accountResult.error} Your group display name was saved but could not be rolled back; please contact your administrator.`,
+          }
+        }
+      }
+      return { error: accountResult.error }
+    }
+
+    if (changedName) {
+      applyParticipantName(updatedParticipant)
+    }
+    if (accountResult.data?.user) {
+      setAccountUser(current => ({
+        ...current,
+        ...accountResult.data.user,
+        user_metadata: {
+          ...current.user_metadata,
+          ...accountResult.data.user.user_metadata,
+        },
+      }))
+    }
+    if (email) {
+      return {
+        message: 'Profile saved. Check your email to confirm the new address before it takes effect.',
+      }
+    }
+    showToast('Profile updated.')
+    setShowProfile(false)
+    return {}
   }
+
+
+// Saves a new turn order. Anyone in the group may do this; whoever ends up
+// first takes over the turn in progress, which is why the members list is
+// re-read rather than reordered locally - the server is the source of truth
+// for both the positions and the new holder.
+async function handleReorder(orderedIds) {
+  const activity = reordering
+  if (!activity) return 'Nothing to reorder.'
+
+  const updated = await reorderRotation(activity.id, orderedIds)
+  if (!updated) {
+    return `Couldn\u2019t save the new order for ${activity.name}. Try again.`
+  }
+
+  const members = await getRotationParticipants(activity.id)
+
+  setActivities(list =>
+    list.map(item =>
+      item.id === activity.id
+        ? { ...item, rotation: updated, members: members || item.members }
+        : item,
+    ),
+  )
+
+  const holder = (members || activity.members).find(
+    member => member.id === updated.current_participant_id,
+  )
+  const who = !holder ? 'Someone new is' : holder.id === meId ? 'You\u2019re' : `${holder.name.split(' ')[0]} is`
+  setReordering(null)
+  showToast(`Reordered ${activity.name}. ${who} up now.`)
+  return null
+}
+
+async function handleMarkDone(activity) {
+  // Only the person whose turn it is can pass it on
+  if (activity.rotation?.current_participant_id !== meId) {
+    showToast('Only the person whose turn it is can mark this done.')
+    return
+  }
+
+  setBusyId(activity.id)
+  const updated = await completeTurn(activity.id, meId)
+  setBusyId(null)
+
+  if (!updated) {
+    showToast(`Couldn’t update ${activity.name}. Try again.`)
+    return
+  }
+  // Update in place (no re-sort) so the row doesn't jump away from the pointer.
+  setActivities(list => list.map(item => (item.id === activity.id ? { ...item, rotation: updated } : item)))
+  const next = activity.members.find(member => member.id === updated.current_participant_id)
+  const who = !next ? 'The next person is' : next.id === meId ? 'You’re' : `${next.name.split(' ')[0]} is`
+  showToast(`Marked ${activity.name} done. ${who} up next.`)
+}
 
   async function handleCreate(values) {
     if (!selectedGroup) {
@@ -205,6 +373,17 @@ export default function Home({ user }) {
     setSelectedGroup(merged.find(g => g.id === newGroup.id))
   }
 
+    // Reloads the user's groups (e.g. after accepting an invite) and keeps
+  // the current selection if it still exists.
+  async function reloadGroups() {
+    if (!participant) return
+    const fetched = ((await getGroupsForUser(participant.id)) || []).filter(Boolean)
+    setGroups(fetched)
+    setSelectedGroup(current =>
+      fetched.find(g => g.id === current?.id) || fetched[0] || null
+    )
+  }
+
   async function loadHouseholdMembers() {
     if (!selectedGroup || !participant) {
       setGroupMembers([]);
@@ -228,15 +407,29 @@ export default function Home({ user }) {
 
   return (
     <div className="home">
-      <TopNav name={name} onComingSoon={comingSoon} groups={groups} onCreateGroup={() => setShowAddGroupModal(true)} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup}/>
-      {/* i added group stuff above */}
-
+      <TopNav
+        name={name}
+        onComingSoon={comingSoon}
+        participantId={meId}
+        onGroupsChanged={reloadGroups}
+        groups={groups}
+        onCreateGroup={() => setShowAddGroupModal(true)}
+        selectedGroup={selectedGroup}
+        onSelectGroup={setSelectedGroup}
+        onEditProfile={() => setShowProfile(true)}
+      />
 
       <main className="home-main">
         <h1 className="greeting">Hi, {firstName}</h1>
 
         <div className="home-grid">
           <div className="home-content">
+            {showGroupPrompt && (
+              <NoGroupPrompt
+                onCreateGroup={() => setShowAddGroupModal(true)}
+                onDismiss={() => setGroupPromptHidden(true)}
+              />
+            )}
             <ActivityPanel
               activities={activities}
               meId={meId}
@@ -247,6 +440,7 @@ export default function Home({ user }) {
               onMarkDone={handleMarkDone}
               onEdit={editor.start}
               onReserve={setReserving}
+              onReorder={setReordering}
             />
             <NextUpBar
               nextUp={getNextUp(activities || [])}
@@ -266,7 +460,7 @@ export default function Home({ user }) {
             
           </div>
 
-          <MembersPanel household={groupMembers} email={user.email} onManageMembers={() => setShowManageMembers(true)} />
+          <MembersPanel household={groupMembers} email={accountUser.email} onManageMembers={() => setShowManageMembers(true)} />
         </div>
       </main>
 
@@ -284,12 +478,36 @@ export default function Home({ user }) {
         />
       )}
 
+      {reordering && (
+        <ReorderTurnsModal
+          members={reordering.members || []}
+          meId={meId}
+          onClose={() => setReordering(null)}
+          onSave={handleReorder}
+        />
+      )}
+
       {showAddGroupModal && participant && (
       <AddGroupModal participant={participant} onClose={() => setShowAddGroupModal(false)} onGroupCreated={handleGroupCreated}/>
       )}
 
+      {showProfile && participant && (
+        <ProfileModal
+          user={accountUser}
+          participant={participant}
+          onClose={() => setShowProfile(false)}
+          onSave={handleProfileSave}
+        />
+      )}
+
       {showManageMembers && (
-      <ManageGroupMembersModal groupId={selectedGroup?.id} onClose={() => setShowManageMembers(false)}  onMembersChanged={loadHouseholdMembers}/>
+        <ManageGroupMembersModal
+          groupId={selectedGroup?.id}
+          currentParticipantId={meId}
+          onClose={() => setShowManageMembers(false)}
+          onMembersChanged={loadHouseholdMembers}
+          onGroupsChanged={reloadGroups}
+        />
       )}
 
       <Toast toast={toast} onDone={hideToast} />

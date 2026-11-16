@@ -8,7 +8,7 @@ vi.mock('../lib/supabase.js', () => ({
 
 import { supabase } from '../lib/supabase.js'
 import { createResource, addResourceMembers, deleteResource } from '../services/resourceService.js'
-import { addParticipant, getParticipants } from '../services/participantService.js'
+import { addParticipant, getParticipants, updateCurrentParticipantName } from '../services/participantService.js'
 
 beforeEach(() => {
   supabase.from.mockReset()
@@ -107,5 +107,24 @@ describe('getParticipants', () => {
       { id: 1, name: 'Alex' },
       { id: 2, name: 'Sam' },
     ])
+  })
+})
+
+describe('updateCurrentParticipantName', () => {
+  it('scopes a display-name update to both the participant and signed-in user', async () => {
+    const update = fakeQuery({
+      data: { id: 1, name: 'Sarah Lee', user_id: 'u1' },
+      error: null,
+    })
+    supabase.from.mockReturnValueOnce(update)
+
+    await expect(updateCurrentParticipantName(1, 'u1', 'Sarah Lee')).resolves.toEqual({
+      id: 1,
+      name: 'Sarah Lee',
+      user_id: 'u1',
+    })
+    expect(update.update).toHaveBeenCalledWith({ name: 'Sarah Lee' })
+    expect(update.eq).toHaveBeenNthCalledWith(1, 'id', 1)
+    expect(update.eq).toHaveBeenNthCalledWith(2, 'user_id', 'u1')
   })
 })

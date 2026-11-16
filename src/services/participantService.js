@@ -100,6 +100,32 @@ async function updateUser(update, userId)
         }
 }
 
+// Updates the signed-in participant's display name, constrained to both ids.
+async function updateCurrentParticipantName(participantId, userId, name)
+{
+    try {
+        const { data, error } = await supabase
+            .from("participants")
+            .update({ name })
+            .eq("id", participantId)
+            .eq("user_id", userId)
+            .select("id, name, user_id")
+            .maybeSingle()
+
+        if (error) {
+            throw error
+        }
+        if (!data) {
+            throw new Error("Your participant profile could not be updated.")
+        }
+
+        return data
+    } catch (error) {
+        console.error("Error updating current participant:", error.message)
+        return null
+    }
+}
+
 // Removes a participant from one resource only (deletes the link in resource_members).
 // The participant still exists in the "participants" table.
 async function removeParticipant(participantId, resourceId)
@@ -174,6 +200,7 @@ export {
     getParticipants,
     getAllParticipants,
     getCurrentParticipant,
+    updateCurrentParticipantName,
     deleteUser,
     updateUser,
     removeParticipant

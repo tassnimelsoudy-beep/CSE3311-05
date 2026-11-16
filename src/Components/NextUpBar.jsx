@@ -1,5 +1,6 @@
 import { Bell, CalendarRange, Plus } from 'lucide-react'
 import { formatDue } from '../utils/activity.js'
+import PropTypes from 'prop-types'
 
 // "It's your turn for X, due tomorrow" plus the main page actions.
 function describe(nextUp, meId) {
@@ -34,4 +35,11 @@ export default function NextUpBar({ nextUp, meId, onAdd, onCheckUpcoming, disabl
       </div>
     </div>
   )
+}
+
+NextUpBar.propTypes = {
+  nextUp: PropTypes.shape({
+    activity: PropTypes.object,
+    person: PropTypes.object,
+  }),
 }
