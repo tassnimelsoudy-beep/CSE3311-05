@@ -29,7 +29,23 @@ function startOfDay(date)
     return copy
 }
 
-// Friendly due date: "Today", "Tomorrow", a weekday this week, or "Oct 3".
+// A month/day label, with the year added whenever the date falls outside the
+// current one. The rule is the calendar year rather than "far away": Jan 3
+// seen from late December is only days off but belongs to a different year,
+// and that is exactly when a bare "Jan 3" is ambiguous.
+function formatCalendarDate(date, now = new Date())
+{
+    const options = { month: 'short', day: 'numeric' }
+
+    if (date.getFullYear() !== now.getFullYear()) {
+        options.year = 'numeric'
+    }
+
+    return date.toLocaleDateString('en-US', options)
+}
+
+// Friendly due date: "Today", "Tomorrow", a weekday this week, "Oct 3", or
+// "Oct 3, 2027" once the date leaves the current year.
 function formatDue(isoDate, now = new Date())
 {
     if (!isoDate) {
@@ -42,7 +58,7 @@ function formatDue(isoDate, now = new Date())
     if (days === 0) return 'Today'
     if (days === 1) return 'Tomorrow'
     if (days < 7) return due.toLocaleDateString('en-US', { weekday: 'long' })
-    return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return formatCalendarDate(due, now)
 }
 
 // Splits a clock label like "3 PM" or "3:30 PM" into its parts, so the AM/PM
@@ -74,7 +90,7 @@ function formatDayLabel(date, now = new Date())
     if (days === 0) return 'Today'
     if (days === 1) return 'Tomorrow'
     if (days > 1 && days < 7) return date.toLocaleDateString('en-US', { weekday: 'long' })
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return formatCalendarDate(date, now)
 }
 
 // A reservation's time window in words, replacing two full timestamps:
@@ -219,6 +235,7 @@ export {
     getOwnerName,
     formatFrequency,
     formatDue,
+    formatCalendarDate,
     turnOrderFromCurrent,
     getHousehold,
     getNextUp,
