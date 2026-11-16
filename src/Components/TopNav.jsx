@@ -6,6 +6,8 @@ import {
   markNotificationRead,
   markAllNotificationsRead
 } from '../services/notificationService.js'
+import { subscribeToPushNotifications } from '../services/pushNotificationService.js'
+
 
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
@@ -100,8 +102,40 @@ useEffect(() => {
 </button>
 {showNotifications && (
   <div className="notifications-panel">
-    <div className="notifications-header">
+    
+
+<div className="notifications-header">
       <h3>Notifications</h3>
+
+      <button
+  type="button"
+style={{
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  padding: "8px 14px",
+  backgroundColor: "#FFF8E6",
+  color: "#594514",
+  border: "1px solid #F0DCA3",
+  borderRadius: "20px",
+  fontSize: "13px",
+  fontWeight: "600",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+}}
+
+  onClick={async () => {
+    try {
+      await subscribeToPushNotifications()
+      alert("Browser notifications enabled! 🔔")
+    } catch (error) {
+      console.error("Failed to enable push notifications:", error)
+      alert(error.message || "Could not enable notifications.")
+    }
+  }}
+>
+  🔔 Enable notifications
+</button>
 
       {notifications.some(n => !n.is_read) && (
         <button
