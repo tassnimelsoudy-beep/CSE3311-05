@@ -3,10 +3,15 @@ import { onAuthChange } from './services/authService.js'
 import AuthScreen from './Components/AuthScreen.jsx'
 import Home from './Components/Home.jsx'
 import Logo from './Components/Logo.jsx'
+import { registerPushServiceWorker } from './services/pushNotificationService.js'
+
 
 function App() {
   // undefined = still checking for a saved login, null = logged out
   const [session, setSession] = useState(undefined)
+ useEffect(() => {
+  registerPushServiceWorker()
+}, [])
 
   useEffect(() => {
     // Fires once right away with any saved session, then on every login/logout.
