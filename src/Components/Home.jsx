@@ -21,6 +21,7 @@ import AddGroupModal from "./AddGroupModal"
 import ManageGroupMembersModal from './ManageGroupMembersModal.jsx'
 import Toast from './Toast.jsx'
 import ProfileModal from './ProfileModal.jsx'
+import CalendarModal from './CalendarModal.jsx'
 import './Home.css'
 
 export default function Home({ user }) {
@@ -42,6 +43,7 @@ export default function Home({ user }) {
   const [showProfile, setShowProfile] = useState(false)
   const [accountUser, setAccountUser] = useState(user)
   const [toast, setToast] = useState(null)
+  const [showCalendar, setShowCalendar] = useState(false)
 
 
   // Find this account's participant, then load (or, for a new account, create)
@@ -413,14 +415,15 @@ async function handleMarkDone(activity) {
               onAdd={() => setAdding(true)}
               onComingSoon={comingSoon}
               onCheckUpcoming={() => setShowReminders(true)}
+              onOpenCalendar={() => setShowCalendar(true)}
               disabled={!participant || activities === null}
-            /> 
+            />
             {showReminders && (
-  <RemindersPanel
-    activities={activities}
-    meId={meId}
-    onClose={() => setShowReminders(false)}
-  />
+              <RemindersPanel
+                activities={activities}
+                meId={meId}
+                onClose={() => setShowReminders(false)}
+              />
 )}
             
           </div>
@@ -464,6 +467,10 @@ async function handleMarkDone(activity) {
           onMembersChanged={loadHouseholdMembers}
           onGroupsChanged={reloadGroups}
         />
+      )}
+
+      {showCalendar && (
+        <CalendarModal activities={activities} onClose={() => setShowCalendar(false)} />
       )}
 
       <Toast toast={toast} onDone={hideToast} />

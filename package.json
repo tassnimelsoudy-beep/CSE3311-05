@@ -22,12 +22,14 @@
     }
   },
   "dependencies": {
+    "@fullcalendar/react": "^7.1.5",
     "@supabase/supabase-js": "^2.116.0",
     "google-closure-compiler": "^20261025.0.0",
     "lucide-react": "^1.47.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "temporal-polyfill": "^1.0.8"
   },
   "devDependencies": {
     "@babel/cli": "^7.29.7",

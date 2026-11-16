@@ -930,6 +930,32 @@
   }
 }
 
+/* ---------- calendar width ---------- */
+.modal-wide {
+  max-width: 900px;
+}
+
+/* Event details modal sits above the calendar modal */
+.modal-backdrop-top {
+  z-index: 55;
+}
+
+.event-line {
+  margin-top: 8px;
+  color: var(--ink-soft);
+}
+
+/* ---------- calendar events ---------- */
+.event-detail {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font-size: 0.92rem;
+}
+.event-detail p { color: var(--ink-soft); margin-top: 2px; }
+
 /* ---------- Smaller screens ---------- */
 @media (max-width: 1100px) {
   .home-grid {

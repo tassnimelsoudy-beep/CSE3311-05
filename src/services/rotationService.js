@@ -7,18 +7,18 @@ const ONLY_HOLDER_CAN_ADVANCE = true //this and activity panel control who can a
 // Sets the current person to the first in the turn order and
 // next_rotation_at to now + the frequency.
 // Returns the new rotation object, or null on failure.
-async function createRotation(resourceId, frequencyValue, frequencyUnit)
+async function createRotation(resourceId, frequencyValue, frequencyUnit) //eventually include start date
 {
-        try {
+    try {
 
-            const participants = await getRotationParticipants(resourceId)
-            const current = getFirstParticipant(participants)
-            const dueDate = nextRotationDate(frequencyValue, frequencyUnit)
+        const participants = await getRotationParticipants(resourceId)
+        const current = getFirstParticipant(participants)
+        const dueDate = nextRotationDate(frequencyValue, frequencyUnit)
 
-            if (!dueDate) {
-            console.error("invalid frequency unit")
-            return null
-            }
+        if (!dueDate) {
+        console.error("invalid frequency unit")
+        return null
+        }
 
         const {data, error } = await supabase
         .from("rotations")
@@ -301,6 +301,8 @@ async function completeTurn(resourceId, participantId)
 
     return advanceTurn(resourceId)
 }
+
+
 export {
     createRotation,
     getRotation,
