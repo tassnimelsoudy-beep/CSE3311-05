@@ -6,8 +6,6 @@ import {
   markNotificationRead,
   markAllNotificationsRead
 } from '../services/notificationService.js'
-import { subscribeToPushNotifications } from '../services/pushNotificationService.js'
-
 import { useInvites } from '../hooks/useInvites.js'
 
 import Avatar from './Avatar.jsx'
@@ -117,81 +115,6 @@ export default function TopNav({ name, onComingSoon, groups, onCreateGroup, sele
       </div>
 
       <div className="topnav-right">
-        <div className="notification-wrapper">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Notifications"
-          onClick={() => setShowNotifications(!showNotifications)}
-          >
-  <Bell size={18} aria-hidden="true" />
-{notifications.some(n => !n.is_read) && (
-  <span className="notification-dot" />
-)}
-</button>
-{showNotifications && (
-  <div className="notifications-panel">
-    
-
-<div className="notifications-header">
-      <h3>Notifications</h3>
-
-      <button
-  type="button"
-style={{
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 14px",
-  backgroundColor: "#FFF8E6",
-  color: "#594514",
-  border: "1px solid #F0DCA3",
-  borderRadius: "20px",
-  fontSize: "13px",
-  fontWeight: "600",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-}}
-
-  onClick={async () => {
-    try {
-      await subscribeToPushNotifications()
-      alert("Browser notifications enabled! 🔔")
-    } catch (error) {
-      console.error("Failed to enable push notifications:", error)
-      alert(error.message || "Could not enable notifications.")
-    }
-  }}
->
-  🔔 Enable notifications
-</button>
-
-      {notifications.some(n => !n.is_read) && (
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              await markAllNotificationsRead()
-              setNotifications(prev =>
-                prev.map(n => ({ ...n, is_read: true }))
-              )
-            } catch (error) {
-              console.error('Failed to mark notifications as read:', error)
-            }
-          }}
-        >
-          Mark all as read
-        </button>
-      )}
-    </div>
-
-    {loadingNotifications ? (
-      <p>Loading notifications...</p>
-    ) : notifications.length === 0 ? (
-      <p>No notifications yet 🔔</p>
-    ) : (
-      <div className="notifications-list">
-        {notifications.map(notification => (
         <div className="notification-wrapper" ref={wrapperRef}>
           <button
             type="button"
