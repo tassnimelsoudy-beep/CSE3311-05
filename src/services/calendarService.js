@@ -120,4 +120,4 @@ function getReservationEvents(activity, rangeStart, rangeEnd)
         }))
 }
 
-export { loadCalendarEvents }
+export { loadCalendarEvents, getReservationEvents, getRotationEvents }
