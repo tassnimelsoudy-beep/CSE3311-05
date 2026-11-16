@@ -20,14 +20,20 @@ function subscribeToReservationChanges(onInsert) {
 }
 
 // Returns active and upcoming reservations for a resource, or null on failure.
-async function getReservationsForResource(resourceId) {
+async function getReservationsForResource(resourceId, rangeStart = new Date(), rangeEnd = null) {
   try {
-    const { data, error } = await supabase
-      .from('reservations')
-      .select('id, resource_id, participant_id, starts_at, ends_at')
-      .eq('resource_id', resourceId)
-      .gte('ends_at', new Date().toISOString())
-      .order('starts_at', { ascending: true })
+    let query = supabase
+    .from('reservations')
+    .select('id, resource_id, participant_id, starts_at, ends_at')
+    .eq('resource_id', resourceId)
+    .gte('ends_at', rangeStart.toISOString())
+
+    if (rangeEnd) {
+        query = query.lt('starts_at', rangeEnd.toISOString())
+    }
+    query = query.order('starts_at', { ascending: true })
+
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -105,5 +111,7 @@ async function createReservation({ resourceId, participantId, startsAt, endsAt }
     return { reservation: null, error: 'Could not create the reservation. Try again.' }
   }
 }
+
+
 
 export { createReservation, getReservationsForResource, subscribeToReservationChanges }

@@ -1,4 +1,4 @@
-import { Bell, CalendarRange, Plus } from 'lucide-react'
+import { Bell, CalendarRange, Plus, CalendarDays } from 'lucide-react'
 import { formatDue } from '../utils/activity.js'
 import PropTypes from 'prop-types'
 
@@ -14,7 +14,7 @@ function describe(nextUp, meId) {
   return `Up next: it’s ${who} turn for ${activity.name}, due ${due}.`
 }
 
-export default function NextUpBar({ nextUp, meId, onAdd, onCheckUpcoming, disabled }) {
+export default function NextUpBar({ nextUp, meId, onAdd, onCheckUpcoming, onOpenCalendar, disabled }) {
   return (
     <div className="panel next-up">
       <div className="next-up-message">
@@ -24,6 +24,10 @@ export default function NextUpBar({ nextUp, meId, onAdd, onCheckUpcoming, disabl
         <p>{describe(nextUp, meId)}</p>
       </div>
       <div className="next-up-actions">
+        <button type="button" className="btn-secondary" onClick={onOpenCalendar} disabled={disabled}>
+          <CalendarDays size={16} aria-hidden="true" />
+          Calendar
+        </button>
         <button type="button" className="btn-secondary" onClick={onCheckUpcoming}>
           <CalendarRange size={16} aria-hidden="true" />
           Check upcoming

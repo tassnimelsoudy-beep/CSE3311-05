@@ -2,13 +2,7 @@
 
 // Combines the resource, participant and rotation services into what the
 // dashboard needs: each activity together with its members and rotation.
-import {
-    getResourcesForGroup,
-    createResource,
-    addResourceMembers,
-    updateResource,
-    deleteResource
-} from './resourceService.js'
+import { getResourcesForGroup, createResource, addResourceMembers, updateResource, deleteResource } from './resourceService.js'
 import { getRotationParticipants, advanceIfDue, createRotation, updateRotation } from './rotationService.js'
 import { isRotation, sortActivities } from '../utils/activity.js'
 import { getReservationsForResource } from './reservationService.js'

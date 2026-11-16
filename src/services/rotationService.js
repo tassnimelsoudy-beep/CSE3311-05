@@ -43,7 +43,7 @@ function startDateToFirstHandoff(dateInput)
 // Returns the new rotation object, or null on failure.
 async function createRotation(resourceId, frequencyValue, frequencyUnit, startDate = null)
 {
-        try {
+    try {
 
             const participants = await getRotationParticipants(resourceId)
             const current = getFirstParticipant(participants)
@@ -52,10 +52,10 @@ async function createRotation(resourceId, frequencyValue, frequencyUnit, startDa
             const dueDate = startDateToFirstHandoff(startDate)
                 || nextRotationDate(frequencyValue, frequencyUnit)
 
-            if (!dueDate) {
-            console.error("invalid frequency unit")
-            return null
-            }
+        if (!dueDate) {
+        console.error("invalid frequency unit")
+        return null
+        }
 
         const {data, error } = await supabase
         .from("rotations")
@@ -391,6 +391,8 @@ async function completeTurn(resourceId, participantId)
 
     return advanceTurn(resourceId)
 }
+
+
 export {
     createRotation,
     getRotation,
